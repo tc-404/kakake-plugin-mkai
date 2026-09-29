@@ -1,0 +1,325 @@
+/* =========================================================================
+   MK_AI 手机皮肤层（.mkai-admin.is-mobile）
+   类原生 iOS：大标题头（滚动收起）+ 精简底部标签栏 + 底部弹层 + safe-area。
+   通过 --mk-collapse（0 展开 → 1 收起）由 JS 按滚动量连续驱动大标题收起。
+   ========================================================================= */
+
+/* 根：改为块级，交由 .mk-ios 纵向布局（覆盖 base 的 flex 行） */
+.mkai-admin.is-mobile {
+  display: block;
+}
+.mkai-admin.is-mobile .mk-ios {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+/* 顶部分段导航头（仅配置视图渲染；标题与副标题已按需求移除） */
+.mkai-admin.is-mobile .mk-ios__nav {
+  position: relative;
+  z-index: 10;
+  flex-shrink: 0;
+  padding: calc(env(safe-area-inset-top, 0px) + 8px) 18px 8px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.55),
+    rgba(255, 255, 255, 0.18)
+  );
+  backdrop-filter: blur(16px) saturate(1.5);
+  -webkit-backdrop-filter: blur(16px) saturate(1.5);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+/* iOS 分段控件（配置：模型 / 策略 / 能力） */
+.mkai-admin.is-mobile .mk-ios__segment {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 10px;
+  background: rgba(118, 118, 128, 0.12);
+}
+.mkai-admin.is-mobile .mk-ios__segment button {
+  flex: 1;
+  min-height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 640;
+  color: var(--mk-text-muted);
+  cursor: pointer;
+  transition: background var(--mk-dur-base) var(--mk-ease-standard),
+    color var(--mk-dur-base) var(--mk-ease-standard);
+}
+.mkai-admin.is-mobile .mk-ios__segment button.is-active {
+  background: #fff;
+  color: var(--mk-text);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.14);
+}
+
+/* 主滚动区 */
+.mkai-admin.is-mobile .mk-ios__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: calc(env(safe-area-inset-top, 0px) + 10px) 16px 24px;
+}
+/* 会话详情：禁外层滚动，顶栏固定、仅消息列表滚动 */
+.mkai-admin.is-mobile .mk-ios:has(.mkai-page-sessions.is-chat) .mk-ios__scroll {
+  overflow: hidden;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.mkai-admin.is-mobile .mk-ios:has(.mkai-page-sessions.is-chat) .mk-ios__page {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.mkai-admin.is-mobile .mkai-page-sessions.is-chat .im-pane-head {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
+}
+.mkai-admin.is-mobile .mk-ios__page {
+  animation: mk-ios-in 0.32s var(--mk-ease-out) both;
+}
+@keyframes mk-ios-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* 底部标签栏（作为纵向 flex 子项常驻底部，含 safe-area） */
+.mkai-admin.is-mobile .mk-ios__tabbar {
+  flex-shrink: 0;
+  display: flex;
+  gap: 2px;
+  padding: 8px 12px calc(8px + var(--mk-safe-bottom));
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(24px) saturate(1.6);
+  -webkit-backdrop-filter: blur(24px) saturate(1.6);
+  border-top: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+.mkai-admin.is-mobile .mk-ios__tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-height: var(--mk-tap-min);
+  padding: 5px 4px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  font: inherit;
+  color: var(--mk-muted);
+  cursor: pointer;
+  transition: color var(--mk-dur-base) var(--mk-ease-standard),
+    transform var(--mk-dur-fast) var(--mk-ease-spring);
+}
+.mkai-admin.is-mobile .mk-ios__tab:active {
+  transform: scale(0.9);
+}
+.mkai-admin.is-mobile .mk-ios__tab.is-active {
+  color: var(--mk-primary);
+}
+.mkai-admin.is-mobile .mk-ios__tab-glyph {
+  font-size: 20px;
+  line-height: 1;
+}
+.mkai-admin.is-mobile .mk-ios__tab-label {
+  font-size: 0.64rem;
+  font-weight: 640;
+  letter-spacing: 0.02em;
+}
+
+/* 覆盖级弹窗：固定视口、屏幕正中居中（portal 至根级宿主，脱离壳层限制） */
+.mkai-admin.is-mobile .mk-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: var(--mk-z-sheet);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  pointer-events: none;
+}
+.mkai-admin.is-mobile .mk-sheet__scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.32);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  opacity: 0;
+  transition: opacity var(--mk-dur-base) var(--mk-ease-standard);
+}
+.mkai-admin.is-mobile .mk-sheet.is-open {
+  pointer-events: auto;
+}
+.mkai-admin.is-mobile .mk-sheet.is-open .mk-sheet__scrim {
+  opacity: 1;
+}
+.mkai-admin.is-mobile .mk-sheet__panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(560px, 92vw);
+  max-height: 82vh;
+  padding: 16px 18px calc(18px + var(--mk-safe-bottom));
+  border-radius: var(--mk-radius-xl, 24px);
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(30px) saturate(1.5);
+  -webkit-backdrop-filter: blur(30px) saturate(1.5);
+  box-shadow: var(--mk-elev-float, 0 26px 60px rgba(15, 40, 60, 0.2));
+  opacity: 0;
+  transform: scale(0.94);
+  transition: opacity var(--mk-dur-base) var(--mk-ease-out),
+    transform var(--mk-dur-base) var(--mk-ease-out);
+}
+.mkai-admin.is-mobile .mk-sheet.is-open .mk-sheet__panel {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.mkai-admin.is-mobile .mk-sheet__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 2px 12px;
+}
+.mkai-admin.is-mobile .mk-sheet__title {
+  font-size: 1.1rem;
+  font-weight: 760;
+  color: var(--mk-text);
+}
+.mkai-admin.is-mobile .mk-sheet__subtitle {
+  margin-top: 3px;
+  font-size: 0.8rem;
+  color: var(--mk-text-muted);
+}
+.mkai-admin.is-mobile .mk-sheet__close {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1px solid var(--mk-border);
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--mk-text-muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.mkai-admin.is-mobile .mk-sheet__body {
+  overflow-y: auto;
+}
+.mkai-admin.is-mobile .mk-sheet__foot {
+  padding-top: 12px;
+}
+
+/* 「更多」弹层内的入口列表 */
+.mkai-admin.is-mobile .mk-sheet-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mkai-admin.is-mobile .mk-sheet-list__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 14px 16px;
+  text-align: left;
+  border: 1px solid var(--mk-border);
+  border-radius: var(--mk-radius-md);
+  background: rgba(255, 255, 255, 0.6);
+  font: inherit;
+  cursor: pointer;
+  transition: background var(--mk-dur-fast), transform var(--mk-dur-fast);
+}
+
+.mkai-admin.is-mobile .mk-sheet-list__item:active {
+  transform: scale(0.98);
+  background: rgba(255, 255, 255, 0.92);
+}
+.mkai-admin.is-mobile .mk-sheet-list__label {
+  font-size: 0.96rem;
+  font-weight: 700;
+  color: var(--mk-text);
+}
+.mkai-admin.is-mobile .mk-sheet-list__desc {
+  font-size: 0.78rem;
+  color: var(--mk-text-muted);
+}
+
+/* 无障碍：尊重减少动态偏好 */
+@media (prefers-reduced-motion: reduce) {
+  .mkai-admin.is-mobile .mk-ios__page,
+  .mkai-admin.is-mobile .mk-ios__tab,
+  .mkai-admin.is-mobile .mk-ios__segment button,
+  .mkai-admin.is-mobile .mk-sheet__panel,
+  .mkai-admin.is-mobile .mk-sheet__scrim,
+  .mkai-admin.is-mobile .mk-sheet-list__item {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* =========================================================================
+   通用触控打磨（保守）：仅作用于手机皮肤，桌面不受影响。
+   去点按高亮 / 禁双击缩放与点击延迟 / 输入聚焦不触发缩放 / 点按区 ≥44px /
+   壳层不可选中 / 滚动不穿透。均为 iOS 原生手感的低风险项，不改版式。
+   ========================================================================= */
+.mkai-admin.is-mobile {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+.mkai-admin.is-mobile button,
+.mkai-admin.is-mobile [role='switch'],
+.mkai-admin.is-mobile [role='radio'],
+.mkai-admin.is-mobile .mk-input,
+.mkai-admin.is-mobile .mk-search-field__input,
+.mkai-admin.is-mobile textarea,
+.mkai-admin.is-mobile select {
+  touch-action: manipulation;
+}
+
+/* 壳层（导航/标签栏/分段）不可选中，贴近原生；正文内容仍可选 */
+.mkai-admin.is-mobile .mk-ios__nav,
+.mkai-admin.is-mobile .mk-ios__tabbar,
+.mkai-admin.is-mobile .mk-ios__segment {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* 主滚动区：滚动到边界不牵动外层（避免整壳回弹/穿透） */
+.mkai-admin.is-mobile .mk-ios__scroll {
+  overscroll-behavior: contain;
+}
+
+/* 按钮点按区 ≥44px（含 --sm；不影响壳层自有标签按钮） */
+.mkai-admin.is-mobile .mk-btn {
+  min-height: var(--mk-tap-min);
+}
+
+/* 输入类：≥16px 字号避免 iOS 聚焦自动缩放；点按区 ≥44px */
+.mkai-admin.is-mobile .mk-input,
+.mkai-admin.is-mobile .mk-search-field__input,
+.mkai-admin.is-mobile textarea,
+.mkai-admin.is-mobile select {
+  font-size: max(16px, 1rem);
+  min-height: var(--mk-tap-min);
+}
