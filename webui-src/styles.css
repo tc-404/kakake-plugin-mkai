@@ -1,0 +1,3177 @@
+/* MK_AI — 液态玻璃配置页（对齐 Kakake 全站材质） */
+
+.mkai-admin {
+  /* 文本 — 青绿主题对齐 Kakake */
+  --mk-text: #0f172a;
+  --mk-text-muted: #64748b;
+  --mk-muted: #94a3b8;
+  --mk-primary: #0f766e;
+  --mk-success: #16a34a;
+  --mk-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --sidebar-w: 200px;
+  --font: "Manrope", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --btn-h: 40px;
+  --btn-h-sm: 34px;
+
+  /* 分层：底色 / 卡片 / 输入 / 按钮 */
+  --panel-bg: rgba(255, 255, 255, 0.78);
+  --panel-border: rgba(15, 23, 42, 0.08);
+  --panel-shadow: 0 10px 28px rgba(15, 40, 60, 0.07);
+  --input-bg: #ffffff;
+  --input-border: rgba(15, 23, 42, 0.14);
+  --input-focus: rgba(20, 184, 166, 0.22);
+  --btn-ghost-bg: #eef4f3;
+  --btn-ghost-border: rgba(15, 23, 42, 0.12);
+  --btn-ghost-hover: #e2ecea;
+
+  /* 兼容旧变量名 */
+  --glass-bg: var(--panel-bg);
+  --glass-bg-strong: rgba(255, 255, 255, 0.88);
+  --glass-bg-soft: rgba(255, 255, 255, 0.45);
+  --glass-bg-hover: rgba(255, 255, 255, 0.92);
+  --glass-border: var(--panel-border);
+  --glass-border-soft: rgba(15, 23, 42, 0.06);
+  --glass-blur: 18px;
+  --glass-blur-xl: 24px;
+  --glass-shadow: var(--panel-shadow);
+  --glass-pill-active-bg: rgba(20, 184, 166, 0.16);
+  --glass-pill-active-border: rgba(20, 184, 166, 0.38);
+  --glass-pill-active-shadow: 0 4px 14px rgba(20, 184, 166, 0.12);
+  --glass-pill-active-text: #0f766e;
+  --mk-surface: var(--panel-bg);
+  --mk-border: var(--panel-border);
+  --mk-bg: transparent;
+
+  box-sizing: border-box;
+  display: flex;
+  min-height: 100%;
+  height: 100%;
+  color: var(--mk-text);
+  font-family: var(--font);
+  overflow: hidden;
+  background:
+    radial-gradient(900px 520px at 8% -6%, rgba(20, 184, 166, .16), transparent 55%),
+    radial-gradient(780px 480px at 96% 4%, rgba(45, 212, 191, .12), transparent 52%),
+    radial-gradient(640px 420px at 70% 18%, rgba(125, 211, 252, .10), transparent 50%),
+    linear-gradient(160deg, #dce8ef 0%, #e4ecf4 42%, #e8f2f0 100%);
+}
+.mkai-admin *, .mkai-admin *::before, .mkai-admin *::after { box-sizing: border-box; }
+
+/* 根级叠层宿主（portal 至 body）：脱离面板内 backdrop-filter 对 position:fixed 的 containing block 陷阱 */
+.mk-overlay-host.mkai-admin {
+  position: fixed;
+  inset: 0;
+  z-index: var(--mk-z-portal);
+  pointer-events: none;
+  display: block;
+  overflow: visible;
+  min-height: 0;
+  height: auto;
+  padding: 0;
+  border: none;
+  box-shadow: none;
+  background: transparent !important;
+}
+.mk-overlay-host > * {
+  pointer-events: auto;
+}
+
+/* 全局隐藏滚动条，保留滚动（含 textarea） */
+.mkai-admin,
+.mkai-admin * {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.mkai-admin::-webkit-scrollbar,
+.mkai-admin *::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+  background: transparent;
+}
+
+.mkai-admin .mk-input--secret {
+  -webkit-text-security: disc;
+  text-security: disc;
+}
+.mkai-admin .mk-input--ok {
+  border-color: rgba(22, 163, 74, 0.55) !important;
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.12);
+}
+.mkai-admin .mk-input--ok:focus {
+  border-color: rgba(22, 163, 74, 0.7) !important;
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.18);
+}
+.mkai-admin .mk-input--err {
+  border-color: rgba(220, 38, 38, 0.6) !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
+}
+.mkai-admin .mk-input--err:focus {
+  border-color: rgba(220, 38, 38, 0.75) !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.18);
+}
+
+.mkai-admin .vendor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+}
+.mkai-admin .vendor-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  text-align: left;
+  padding: 14px 14px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  transition:
+    border-color 0.22s ease,
+    box-shadow 0.22s ease,
+    transform 0.18s ease,
+    background 0.22s ease;
+}
+.mkai-admin .vendor-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(20, 184, 166, 0.35);
+  box-shadow: 0 6px 16px rgba(15, 40, 60, 0.08);
+}
+.mkai-admin .vendor-card.is-active {
+  border-color: rgba(20, 184, 166, 0.55);
+  background: linear-gradient(145deg, #ffffff 0%, #f0fdfa 100%);
+  box-shadow: 0 0 0 1px rgba(20, 184, 166, 0.12), 0 8px 18px rgba(20, 184, 166, 0.12);
+}
+.mkai-admin .vendor-card__name {
+  font-size: 14px;
+  font-weight: 750;
+  color: #0f172a;
+}
+.mkai-admin .vendor-card__name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+.mkai-admin .vendor-card__tag {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #0f766e;
+  background: rgba(20, 184, 166, 0.12);
+  border: 1px solid rgba(45, 212, 191, 0.35);
+  border-radius: 999px;
+  padding: 1px 6px;
+  line-height: 1.3;
+}
+.mkai-admin .vendor-card.is-active .vendor-card__name { color: #0f766e; }
+.mkai-admin .vendor-card__model {
+  font-size: 11px;
+  color: #64748b;
+  word-break: break-all;
+  line-height: 1.35;
+}
+.mkai-admin .vendor-card--custom {
+  position: relative;
+  border-style: dashed;
+}
+.mkai-admin .vendor-card--add {
+  position: relative;
+  align-items: center;
+  justify-content: center;
+  min-height: 86px;
+  border-style: dashed;
+  border-color: rgba(15, 118, 110, 0.28);
+  background: rgba(240, 253, 250, 0.55);
+}
+.mkai-admin .vendor-card__corner {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #0f766e;
+  background: rgba(20, 184, 166, 0.12);
+  border: 1px solid rgba(45, 212, 191, 0.35);
+  border-radius: 999px;
+  padding: 1px 6px;
+  line-height: 1.3;
+}
+.mkai-admin .vendor-card__plus {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+  color: #0f766e;
+  background: rgba(20, 184, 166, 0.14);
+  border: 1px solid rgba(45, 212, 191, 0.4);
+}
+.mkai-admin .vendor-card__corner--anthropic {
+  color: #7c2d12;
+  background: rgba(251, 146, 60, 0.14);
+  border-color: rgba(251, 146, 60, 0.45);
+}
+.mkai-admin .vendor-card__tag--anthropic {
+  color: #7c2d12;
+  background: rgba(251, 146, 60, 0.12);
+  border-color: rgba(251, 146, 60, 0.35);
+}
+.mkai-admin .mk-input-with-action {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+.mkai-admin .mk-input-with-action .mk-input {
+  flex: 1;
+  padding-right: 42px;
+}
+.mkai-admin .mk-input-with-action__btn {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: rgba(240, 253, 250, 0.9);
+  color: #0f766e;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.mkai-admin .mk-input-with-action__btn:hover:not(:disabled) {
+  border-color: rgba(20, 184, 166, 0.45);
+  background: rgba(204, 251, 241, 0.95);
+}
+.mkai-admin .mk-input-with-action__btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.mkai-admin .mk-model-picker {
+  position: relative;
+}
+.mkai-admin .mk-model-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 45;
+  margin: 0;
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow:
+    0 10px 28px rgba(15, 40, 60, 0.14),
+    0 0 0 1px rgba(15, 23, 42, 0.04);
+  overflow: hidden;
+}
+.mkai-admin .mk-model-list__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 650;
+  color: #64748b;
+  background: #f8fafc;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+.mkai-admin .mk-model-list__close {
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #64748b;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.mkai-admin .mk-model-list__close:hover {
+  background: rgba(15, 23, 42, 0.06);
+  color: #0f172a;
+}
+.mkai-admin .mk-model-list__items {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 220px;
+  overflow: auto;
+}
+.mkai-admin .mk-model-list__item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 7px 10px;
+  border: none;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  color: #0f172a;
+  cursor: pointer;
+}
+.mkai-admin .mk-model-list__item:hover,
+.mkai-admin .mk-model-list__item[aria-selected='true'] {
+  background: rgba(20, 184, 166, 0.08);
+}
+.mkai-admin .mk-model-list__items li:last-child .mk-model-list__item {
+  border-bottom: none;
+}
+.mkai-admin .mk-probe-log {
+  margin: 0;
+  min-height: 96px;
+  max-height: 260px;
+  overflow: auto;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: #0f172a;
+  color: #e2e8f0;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.mkai-admin .im-avatar-img {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  object-fit: cover;
+  background: rgba(226, 232, 240, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  flex-shrink: 0;
+}
+.mkai-admin .im-msg .im-avatar-img {
+  width: 36px;
+  height: 36px;
+}
+.mkai-admin .im-msg.out .im-avatar-img { order: 2; }
+
+.mkai-admin .bl-add-row {
+  display: grid;
+  grid-template-columns: 1fr minmax(96px, 120px);
+  gap: 10px;
+  align-items: center;
+}
+.mkai-admin .bl-list { display: flex; flex-direction: column; gap: 8px; }
+.mkai-admin .bl-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+}
+.mkai-admin .bl-row__id {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #0f172a;
+}
+
+.mkai-admin .sidebar {
+  width: var(--sidebar-w);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 18px 12px;
+  background: rgba(255, 255, 255, 0.28);
+  backdrop-filter: blur(var(--glass-blur-xl)) saturate(1.3);
+  -webkit-backdrop-filter: blur(var(--glass-blur-xl)) saturate(1.3);
+  border-right: 1px solid rgba(255, 255, 255, 0.45);
+  overflow: auto;
+}
+.mkai-admin .brand { font-weight: 800; font-size: 1.25rem; padding: 8px 10px 18px; line-height: 1.15; }
+.mkai-admin .brand .mark {
+  background: linear-gradient(120deg, #0f766e 10%, #14b8a6 55%, #0ea5e9 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.mkai-admin .brand small { display:block; font-size: .72rem; font-weight: 600; color: var(--mk-text-muted); margin-top: 6px; }
+
+.mkai-admin .sidebar-nav {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-height: 0;
+}
+
+.mkai-admin .nav-liquid {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: 0.95rem;
+  opacity: 0;
+  will-change: transform, width, height;
+  background: rgba(20, 184, 166, 0.18);
+  border: 1px solid rgba(20, 184, 166, 0.42);
+  -webkit-backdrop-filter: blur(10px) saturate(1.4);
+  backdrop-filter: blur(10px) saturate(1.4);
+  box-shadow:
+    0 8px 22px rgba(20, 184, 166, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -1px 0 rgba(20, 184, 166, 0.08);
+  transition:
+    transform 0.48s cubic-bezier(0.32, 0.72, 0, 1),
+    width 0.48s cubic-bezier(0.32, 0.72, 0, 1),
+    height 0.48s cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 0.2s ease;
+}
+.mkai-admin .nav-liquid.is-ready { opacity: 1; }
+.mkai-admin .nav-liquid::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.45) 0%, transparent 42%, transparent 100%);
+  pointer-events: none;
+}
+
+.mkai-admin .nav-slot { position: relative; z-index: 1; }
+.mkai-admin .nav-btn {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  border: 1px solid transparent;
+  background: transparent;
+  text-align: left;
+  padding: 10px 14px;
+  border-radius: 0.95rem;
+  cursor: pointer;
+  color: #64748b;
+  font: inherit;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  transition:
+    color 0.35s ease,
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.3s ease;
+}
+.mkai-admin .nav-btn:hover {
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.38);
+  border-color: rgba(255, 255, 255, 0.45);
+  transform: scale(1.02);
+}
+.mkai-admin .nav-btn.is-active {
+  background: transparent;
+  border-color: transparent;
+  color: #0f766e;
+  font-weight: 700;
+  box-shadow: none;
+}
+.mkai-admin .nav-btn:active { transform: scale(0.98); }
+
+.mkai-admin .main {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  padding: 20px 24px 32px;
+  width: 100%;
+}
+
+.mkai-admin .nav-label {
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(100, 116, 139, 0.75);
+  padding: 14px 12px 6px;
+}
+
+.mkai-admin .page-head,
+.mkai-admin .page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.mkai-admin .page-title {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+.mkai-admin .page-desc {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.45;
+  width: 100%;
+}
+.mkai-admin .page-toolbar {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(96px, 1fr);
+  gap: 8px;
+  flex-shrink: 0;
+  min-width: min(280px, 100%);
+}
+.mkai-admin .page-toolbar > .mk-btn { width: 100%; }
+.mkai-admin .toolbar__actions {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(96px, 1fr);
+  gap: 8px;
+}
+.mkai-admin .toolbar__actions > .mk-btn { width: 100%; }
+.mkai-admin .chip--warn {
+  color: #b45309;
+  background: rgba(245, 158, 11, 0.14);
+  border-color: rgba(245, 158, 11, 0.28);
+}
+
+.mkai-admin .toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.mkai-admin .toolbar__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.mkai-admin .sw-tabbar {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 14px;
+  width: 100%;
+}
+.mkai-admin .seg {
+  position: relative;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 4px;
+  padding: 5px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  width: 100%;
+  max-width: none;
+  box-shadow: 0 2px 10px rgba(15, 40, 60, 0.04);
+}
+.mkai-admin .seg--center {
+  margin: 0 auto;
+  width: 100%;
+}
+.mkai-admin .seg__btn {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 10px;
+  padding: 0 18px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 650;
+  color: #64748b;
+  cursor: pointer;
+  transition: color 0.35s ease;
+  white-space: nowrap;
+}
+.mkai-admin .seg__btn:hover { color: #0f172a; }
+.mkai-admin .seg__btn.is-active {
+  background: transparent;
+  border-color: transparent;
+  color: #0f766e;
+  box-shadow: none;
+}
+
+.mkai-admin .panel {
+  background: var(--panel-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.2);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.2);
+  border: 1px solid var(--panel-border);
+  border-radius: 16px;
+  box-shadow: var(--panel-shadow);
+  padding: 18px 20px 16px;
+  margin-bottom: 14px;
+  width: 100%;
+}
+.mkai-admin .panel--flush { padding: 10px; }
+.mkai-admin .panel-title {
+  margin: 0 0 14px;
+  font-size: 14px;
+  font-weight: 750;
+  color: #0f172a;
+}
+.mkai-admin .panel + .panel { margin-top: 0; }
+
+.mkai-admin .status-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.mkai-admin .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 11px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  background: #eef2f7;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+}
+.mkai-admin .chip strong { font-weight: 700; color: #0f172a; }
+.mkai-admin .chip--muted { color: #64748b; }
+.mkai-admin .chip--ok {
+  color: #15803d;
+  background: rgba(22, 163, 74, 0.12);
+  border-color: rgba(22, 163, 74, 0.22);
+}
+.mkai-admin .chip--off {
+  color: #64748b;
+  background: rgba(148, 163, 184, 0.2);
+}
+
+.mkai-admin .form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px 16px;
+}
+.mkai-admin .form-grid--3 {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+.mkai-admin .field-span-2 { grid-column: 1 / -1; }
+
+.mkai-admin .switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.28);
+}
+.mkai-admin .switch-row:last-of-type { border-bottom: 0; }
+.mkai-admin .switch-row__title { font-size: 14px; font-weight: 650; color: #1e293b; }
+.mkai-admin .switch-row__desc { font-size: 12px; color: #64748b; margin-top: 3px; line-height: 1.4; }
+.mkai-admin .switch-row__cap { display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0; }
+
+.mkai-admin .mkai-page-config,
+.mkai-admin .mkai-page-switch {
+  width: 100%;
+  max-width: none;
+}
+
+.mkai-admin .glass-card {
+  background: var(--panel-bg);
+  backdrop-filter: blur(var(--glass-blur-xl)) saturate(1.2);
+  -webkit-backdrop-filter: blur(var(--glass-blur-xl)) saturate(1.2);
+  border: 1px solid var(--panel-border);
+  border-radius: 1rem;
+  box-shadow: var(--panel-shadow);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: 100%;
+}
+.mkai-admin .mk-panel-head {
+  padding: 18px 22px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.28);
+  background: transparent;
+}
+.mkai-admin .mk-panel-body { padding: 18px 22px 22px; }
+.mkai-admin .mk-title-lg { margin: 0; font-size: 1.2rem; font-weight: 750; color: #0f172a; }
+.mkai-admin .mk-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #64748b;
+  letter-spacing: 0.01em;
+}
+.mkai-admin .mk-hint { font-size: 12px; color: var(--mk-text-muted); line-height: 1.45; }
+.mkai-admin .mk-form-group { margin-bottom: 12px; }
+
+.mkai-admin .mk-input {
+  width: 100%;
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  border-radius: 12px;
+  padding: 11px 14px;
+  min-height: var(--btn-h);
+  font: inherit;
+  color: #0f172a;
+  outline: none;
+  transition: background .18s ease, border-color .18s ease, box-shadow .18s ease;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+.mkai-admin textarea.mk-input {
+  min-height: 160px;
+  line-height: 1.5;
+  resize: vertical;
+  overflow: auto;
+  margin-top: 8px;
+}
+.mkai-admin textarea.mk-input--prompt {
+  min-height: 220px;
+}
+.mkai-admin .mk-input::placeholder { color: #94a3b8; }
+.mkai-admin .mk-input:focus {
+  background: #ffffff;
+  border-color: rgba(20, 184, 166, 0.55);
+  box-shadow: 0 0 0 3px var(--input-focus);
+}
+.mkai-admin input.mk-input[type="password"] {
+  letter-spacing: 0.12em;
+}
+.mkai-admin select.mk-input {
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: var(--input-bg);
+  background-image:
+    linear-gradient(45deg, transparent 50%, rgba(100, 116, 139, 0.7) 50%),
+    linear-gradient(135deg, rgba(100, 116, 139, 0.7) 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) calc(50% - 3px),
+    calc(100% - 12px) calc(50% - 3px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 36px;
+}
+
+.mkai-admin .mk-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  height: var(--btn-h);
+  min-height: var(--btn-h);
+  min-width: 0;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background .18s ease, border-color .18s ease, transform .18s ease, box-shadow .18s ease, color .18s ease, filter .18s ease;
+}
+.mkai-admin .mk-btn--primary {
+  background: linear-gradient(135deg, #0f766e, #14b8a6);
+  color: #fff;
+  border-color: rgba(20, 184, 166, 0.45);
+  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.24);
+}
+.mkai-admin .mk-btn--primary:hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+.mkai-admin .mk-btn--primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+.mkai-admin .mk-btn--ghost {
+  background: var(--btn-ghost-bg);
+  border-color: var(--btn-ghost-border);
+  color: #334155;
+  box-shadow: none;
+}
+.mkai-admin .mk-btn--ghost:hover {
+  background: var(--btn-ghost-hover);
+  color: #0f172a;
+  transform: translateY(-1px);
+}
+.mkai-admin .mk-btn--sm {
+  height: var(--btn-h-sm);
+  min-height: var(--btn-h-sm);
+  padding: 0 12px;
+  font-size: 12px;
+  border-radius: 10px;
+}
+.mkai-admin .mk-btn-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+  width: 100%;
+}
+.mkai-admin .mk-btn-row > .mk-btn {
+  width: 100%;
+}
+
+.mkai-admin .mk-seg { display:flex; flex-wrap:wrap; gap: 6px; }
+/* 作为表单控件用时（如语音引擎切换）与上方 label 留出呼吸感 */
+.mkai-admin .mk-form-group > .mk-seg { margin-top: 6px; }
+/**
+ * 等分铺满变体：胶囊横向撑满整行、按钮等宽、文字居中。
+ * 用于「二选一」这类切换（如语音引擎），避免按钮只占左边一小截、
+ * 右边留一大片空白显得没做完。带容器底色，让「一整个控件」的边界看得见。
+ */
+.mkai-admin .mk-seg--fill {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  flex-wrap: nowrap;
+  gap: 6px;
+  width: 100%;
+  padding: 5px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  box-shadow: 0 2px 10px rgba(15, 40, 60, 0.04);
+}
+.mkai-admin .mk-seg--fill .mk-seg__btn {
+  width: 100%;
+  text-align: center;
+  padding: 9px 10px;
+}
+.mkai-admin .mk-seg__btn {
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 12px;
+  padding: 8px 14px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  color: #64748b;
+  transition: color .18s ease, background .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+.mkai-admin .mk-seg__btn:hover {
+  color: #334155;
+  background: rgba(255, 255, 255, 0.20);
+}
+.mkai-admin .mk-seg__btn--active {
+  background: var(--glass-pill-active-bg);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-color: var(--glass-pill-active-border);
+  color: var(--glass-pill-active-text);
+  font-weight: 650;
+  box-shadow: var(--glass-pill-active-shadow);
+}
+
+.mkai-admin .mk-cs-tab-panel { display: none; }
+.mkai-admin .mk-cs-tab-panel.is-active { display: block; }
+/* 外链跳转（如「前往官网获取密钥」）：内联胶囊样式，跟 hint 有区分但不喧宾夺主 */
+.mkai-admin .mk-link-out {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-pill-active-border);
+  background: var(--glass-pill-active-bg);
+  color: var(--glass-pill-active-text);
+  font-size: 12px;
+  font-weight: 650;
+  text-decoration: none;
+  transition: box-shadow .18s ease, transform .18s ease;
+}
+.mkai-admin .mk-link-out:hover {
+  box-shadow: var(--glass-pill-active-shadow);
+  transform: translateY(-1px);
+}
+.mkai-admin .mk-link-out__arrow { font-size: 11px; opacity: .8; }
+.mkai-admin .mk-toast-stack {
+  position: fixed;
+  right: 18px;
+  bottom: calc(18px + var(--mk-safe-bottom));
+  z-index: 80;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 10px;
+  width: min(360px, calc(100vw - 28px));
+  pointer-events: none;
+}
+.mkai-admin .mk-toast {
+  pointer-events: auto;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: start;
+  gap: 10px;
+  padding: 12px 12px 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  box-shadow: 0 12px 32px rgba(15, 40, 60, 0.14);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  animation: mkai-fade-up 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  color: #0f172a;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.mkai-admin .mk-toast__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 750;
+  flex-shrink: 0;
+}
+.mkai-admin .mk-toast__msg { min-width: 0; padding-top: 1px; word-break: break-word; }
+.mkai-admin .mk-toast__close {
+  border: 0;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0 2px;
+}
+.mkai-admin .mk-toast--ok {
+  border-color: rgba(22, 163, 74, 0.28);
+  background: linear-gradient(145deg, #ffffff 0%, #f0fdf4 100%);
+}
+.mkai-admin .mk-toast--ok .mk-toast__badge {
+  color: #15803d;
+  background: rgba(22, 163, 74, 0.14);
+}
+.mkai-admin .mk-toast--err {
+  border-color: rgba(220, 38, 38, 0.28);
+  background: linear-gradient(145deg, #ffffff 0%, #fef2f2 100%);
+}
+.mkai-admin .mk-toast--err .mk-toast__badge {
+  color: #b91c1c;
+  background: rgba(220, 38, 38, 0.12);
+}
+.mkai-admin .mk-toast--warn {
+  border-color: rgba(217, 119, 6, 0.3);
+  background: linear-gradient(145deg, #ffffff 0%, #fffbeb 100%);
+}
+.mkai-admin .mk-toast--warn .mk-toast__badge {
+  color: #b45309;
+  background: rgba(245, 158, 11, 0.16);
+}
+.mkai-admin .mk-toast--info {
+  border-color: rgba(20, 184, 166, 0.28);
+  background: linear-gradient(145deg, #ffffff 0%, #f0fdfa 100%);
+}
+.mkai-admin .mk-toast--info .mk-toast__badge {
+  color: #0f766e;
+  background: rgba(20, 184, 166, 0.14);
+}
+.mkai-admin .mk-confirm-overlay { z-index: 90; }
+.mkai-admin .mk-confirm { max-width: min(420px, 96vw); }
+.mkai-admin .mk-confirm__msg {
+  margin: 0 0 16px;
+  color: #475569;
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+.mkai-admin .mk-btn--danger {
+  background: #dc2626;
+  color: #fff;
+  border-color: #b91c1c;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.24);
+}
+.mkai-admin .mk-btn--danger:hover {
+  background: #b91c1c;
+  filter: none;
+}
+@media (max-width: 760px) {
+  .mkai-admin .mk-toast-stack {
+    left: 14px;
+    right: 14px;
+    width: auto;
+    bottom: calc(70px + var(--mk-safe-bottom));
+  }
+}
+.mkai-admin .mk-modal-overlay {
+  position: fixed; inset: 0; background: rgba(15,23,42,.28);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display:flex; align-items:center; justify-content:center;
+  z-index: var(--mk-z-drawer); padding: 16px;
+}
+.mkai-admin .mk-modal {
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(22px) saturate(1.2);
+  -webkit-backdrop-filter: blur(22px) saturate(1.2);
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 16px;
+  padding: 18px; width: min(560px, 100%);
+  box-shadow: 0 20px 50px rgba(15,23,42,.18);
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+.mkai-admin .mk-modal__title { margin: 0 0 8px; font-size: 1.05rem; }
+.mkai-admin .mobile-tabbar { display:none; }
+.mkai-admin .mk-switch-toolbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+}
+.mkai-admin .mk-tabs-inline { display:flex; align-items:center; gap: 8px; }
+.mkai-admin .mk-tab-pill {
+  border: 1px solid transparent;
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  color: #64748b;
+  padding: 7px 12px;
+  border-radius: 12px;
+  transition: color .18s ease, background .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+.mkai-admin .mk-tab-pill:hover { color: #334155; background: rgba(255,255,255,.2); }
+.mkai-admin .mk-tab-pill--active {
+  color: var(--glass-pill-active-text);
+  background: var(--glass-pill-active-bg);
+  border-color: var(--glass-pill-active-border);
+  box-shadow: var(--glass-pill-active-shadow);
+}
+.mkai-admin .mk-tab-sep { opacity: .35; }
+.mkai-admin .bulk-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--btn-h-sm);
+  min-width: 96px;
+  border: 1px solid var(--btn-ghost-border);
+  background: var(--btn-ghost-bg);
+  color: #334155;
+  border-radius: 10px;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background .18s ease, transform .18s ease;
+}
+.mkai-admin .bulk-btn:hover { background: var(--btn-ghost-hover); transform: translateY(-1px); }
+.mkai-admin .mk-search-field {
+  margin-top: 12px; display:flex; align-items:center; gap: 8px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 12px;
+  padding: 8px 10px;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+.mkai-admin .mk-search-field__input {
+  flex:1; border:0; background: transparent; font: inherit; outline: none; color: #1e293b;
+}
+.mkai-admin .mk-search-field__clear {
+  border:0; background: transparent; cursor:pointer; color: var(--mk-text-muted); display:flex;
+}
+.mkai-admin .mk-state { padding: 28px 12px; text-align:center; color: var(--mk-text-muted); }
+.mkai-admin .mk-switch-list { display:flex; flex-direction: column; gap: 10px; }
+.mkai-admin .broadcast-toolbar__check {
+  display:flex; align-items:center; gap: 8px; margin-top: 10px; cursor: pointer;
+}
+
+/* 页面进入 / 错落入场 */
+@keyframes mkai-fade-up {
+  0% { opacity: 0; transform: translateY(16px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.mkai-admin .page-enter { width: 100%; }
+.mkai-admin .main:has(.mkai-page-sessions.is-chat) {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+.mkai-admin .main:has(.mkai-page-sessions.is-chat) .page-enter {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.mkai-admin .stagger-item {
+  opacity: 0;
+  animation: mkai-fade-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.mkai-admin .stagger-1 { animation-delay: 0.05s; }
+.mkai-admin .stagger-2 { animation-delay: 0.12s; }
+.mkai-admin .stagger-3 { animation-delay: 0.2s; }
+.mkai-admin .stagger-4 { animation-delay: 0.28s; }
+.mkai-admin .stagger-5 { animation-delay: 0.36s; }
+
+/* 能力页折叠 */
+.mkai-admin .fold-panel {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 16px;
+  box-shadow: var(--panel-shadow);
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.mkai-admin .fold-panel__summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  font-weight: 700;
+  color: #0f172a;
+  user-select: none;
+}
+.mkai-admin .fold-panel__summary::-webkit-details-marker { display: none; }
+.mkai-admin .fold-panel__summary::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid #64748b;
+  border-bottom: 2px solid #64748b;
+  transform: rotate(45deg);
+  transition: transform .22s ease;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.mkai-admin .fold-panel[open] > .fold-panel__summary::after {
+  transform: rotate(225deg);
+  margin-top: 4px;
+}
+.mkai-admin .fold-panel__meta {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  margin-left: auto;
+  margin-right: 10px;
+}
+.mkai-admin .fold-panel__body {
+  padding: 0 16px 16px;
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
+  animation: mkai-fade-up 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* 群聊开关网格 */
+.mkai-admin .sw-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+@media (min-width: 761px) {
+  .mkai-admin .sw-grid {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  }
+}
+.mkai-admin .sw-skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+@media (min-width: 761px) {
+  .mkai-admin .sw-skeleton-grid {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  }
+}
+.mkai-admin .sw-skeleton {
+  height: 92px;
+  border-radius: 16px;
+  background: linear-gradient(90deg, rgba(255,255,255,.35), rgba(255,255,255,.65), rgba(255,255,255,.35));
+  background-size: 200% 100%;
+  animation: mkai-shimmer 1.2s ease-in-out infinite;
+}
+@keyframes mkai-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+.mkai-admin .sw-card {
+  display: grid;
+  grid-template-columns: 48px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  box-shadow: 0 2px 10px rgba(15, 40, 60, 0.04);
+  transition: border-color .2s ease, box-shadow .2s ease, transform .18s ease, background .2s ease;
+}
+.mkai-admin .sw-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(15, 40, 60, 0.08);
+}
+.mkai-admin .sw-card.is-on {
+  border-color: rgba(20, 184, 166, 0.42);
+  background: linear-gradient(145deg, #ffffff 0%, #f0fdfa 100%);
+  box-shadow: 0 6px 18px rgba(20, 184, 166, 0.12);
+}
+.mkai-admin .sw-card__avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  border: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #e7f1ef;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: #0f766e;
+  flex-shrink: 0;
+}
+.mkai-admin .sw-card__avatar-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.mkai-admin .sw-card__body { min-width: 0; }
+.mkai-admin .sw-card__name {
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mkai-admin .sw-card__meta {
+  margin-top: 3px;
+  font-size: 11px;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mkai-admin .sw-card__toggle { flex-shrink: 0; }
+
+.mkai-admin .mk-modal--enter {
+  animation: mkai-fade-up 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.mkai-admin .toggle-switch input:checked + .toggle-slider {
+  background: rgba(20, 184, 166, 0.8);
+  border-color: rgba(45, 212, 191, 0.55);
+}
+.mkai-admin .sc-kb-cap.is-on {
+  background: rgba(20, 184, 166, 0.8);
+  border-color: rgba(45, 212, 191, 0.55);
+}
+
+@media (max-width: 760px) {
+  .mkai-admin { flex-direction: column; }
+  .mkai-admin .sidebar { display:none; }
+  .mkai-admin .mobile-tabbar {
+    display: flex;
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    gap: 4px;
+    padding: 8px 10px calc(8px + var(--mk-safe-bottom));
+    background: rgba(255, 255, 255, 0.42);
+    backdrop-filter: blur(16px) saturate(1.4);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+    border-top: 1px solid rgba(255, 255, 255, 0.5);
+  }
+  .mkai-admin .mobile-tabbar > button {
+    position: relative;
+    z-index: 1;
+    flex: 1;
+    border: 1px solid transparent;
+    background: transparent;
+    padding: 10px 4px;
+    border-radius: 12px;
+    font: inherit;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    color: #64748b;
+    transition: color 0.35s ease;
+  }
+  .mkai-admin .mobile-tabbar > button.is-active {
+    background: transparent;
+    color: #0f766e;
+    box-shadow: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mkai-admin .stagger-item,
+  .mkai-admin .fold-panel__body,
+  .mkai-admin .mk-modal--enter {
+    animation: none;
+    opacity: 1;
+  }
+  .mkai-admin .nav-liquid {
+    transition: none !important;
+  }
+}
+
+    /* 发卡系统 */
+    #page-card-shop .mk-cs-tab-panel { display: none; }
+    #page-card-shop .mk-cs-tab-panel.is-active { display: block; }
+    .mkai-page-config .mk-cs-tab-panel { display: none; }
+    .mkai-page-config .mk-cs-tab-panel.is-active { display: block; }
+    .mkai-page-config .glass-card {
+      flex: 0 0 auto;
+      min-height: auto;
+      max-height: none;
+      overflow: visible;
+    }
+    .mkai-page-config .mk-panel-body {
+      flex: none;
+      min-height: auto;
+      overflow: visible;
+      padding-bottom: max(20px, var(--mk-safe-bottom));
+    }
+    .mkai-page-config .mk-cs-stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+    @media (max-width: 900px) {
+      .mkai-page-config .mk-cs-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    .mkai-page-config .mk-cs-stat {
+      background: #ffffff;
+      border: 1px solid rgba(15, 23, 42, 0.1);
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+      transition: background .18s ease, border-color .18s ease;
+      box-shadow: 0 2px 8px rgba(15, 40, 80, 0.04);
+    }
+    .mkai-page-config .mk-cs-stat:hover { background: var(--glass-bg-hover); }
+    .mkai-page-config .mk-cs-stat__label {
+      font-size: 12px;
+      color: #94a3b8;
+      letter-spacing: 0.02em;
+    }
+    .mkai-page-config .mk-cs-stat__value {
+      font-size: 1.25rem;
+      font-weight: 650;
+      line-height: 1.2;
+      word-break: break-all;
+      color: #1e293b;
+    }
+    .mkai-page-config .mk-cs-stat--accent .mk-cs-stat__value { color: var(--mk-primary, #3b82f6); }
+    .mkai-page-config .mk-cs-stat--ok .mk-cs-stat__value { color: var(--mk-success, #16a34a); }
+    .mkai-page-config .sc-meter {
+      margin: 14px 0 0;
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1px solid var(--glass-border-soft);
+      background: var(--glass-bg);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+    .mkai-page-config .sc-meter + .sc-meter { margin-top: 10px; }
+    .mkai-page-config .sc-meter__head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .mkai-page-config .sc-meter__title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--mk-text, #222);
+    }
+    .mkai-page-config .sc-meter__pct {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--mk-primary, #3b82f6);
+      font-variant-numeric: tabular-nums;
+    }
+    .mkai-page-config .sc-meter__track {
+      height: 10px;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--mk-border, #ddd) 55%, transparent);
+      overflow: hidden;
+    }
+    .mkai-page-config .sc-meter__fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #22c55e, #3b82f6);
+      transition: width 0.35s ease;
+    }
+    .mkai-page-config .sc-meter__fill--warn {
+      background: linear-gradient(90deg, #f59e0b, #ef4444);
+    }
+    .mkai-page-config .sc-meter__fill--balance {
+      background: linear-gradient(90deg, #6366f1, #3b82f6);
+    }
+    .mkai-page-config .sc-meter__sub {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--mk-muted, #888);
+      line-height: 1.45;
+    }
+    .mkai-page-config .sc-balance-split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .mkai-page-config .sc-balance-split__item {
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: var(--glass-bg-soft);
+      border: 1px solid var(--glass-border-soft);
+      backdrop-filter: blur(6px);
+    }
+    .mkai-page-config .sc-balance-split__item span {
+      display: block;
+      font-size: 11px;
+      color: var(--mk-muted, #888);
+    }
+    .mkai-page-config .sc-balance-split__item strong {
+      display: block;
+      margin-top: 4px;
+      font-size: 15px;
+      font-variant-numeric: tabular-nums;
+    }
+    .mkai-page-config .sc-profile {
+      margin-bottom: 16px;
+      padding: 0;
+      border-radius: 0;
+      border: none;
+      background: transparent;
+    }
+    .mkai-page-config .sc-profile__title {
+      font-size: 13px;
+      font-weight: 650;
+      margin: 0 0 10px;
+      color: #334155;
+    }
+    .mkai-page-config .sc-profile__grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 8px;
+    }
+    @media (max-width: 720px) {
+      .mkai-page-config .sc-profile__grid { grid-template-columns: 1fr; }
+    }
+    .mkai-page-config .sc-profile__item {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 14px 16px;
+      border-radius: 12px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid var(--glass-border-soft);
+      transition: background .18s ease, border-color .18s ease;
+    }
+    .mkai-page-config .sc-profile__item:hover {
+      background: var(--glass-bg-hover);
+      border-color: rgba(255, 255, 255, 0.45);
+    }
+    .mkai-page-config .sc-profile__item--full {
+      grid-column: 1 / -1;
+    }
+    .mkai-page-config .sc-profile__label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: #94a3b8;
+      margin-bottom: 2px;
+      letter-spacing: 0.02em;
+    }
+    .mkai-page-config .sc-profile__value {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: #1e293b;
+      line-height: 1.45;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+    }
+    .mkai-page-config .sc-profile__value--mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-weight: 500;
+      font-size: 12.5px;
+      color: #334155;
+    }
+    .mkai-page-config .sc-profile__badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 650;
+    }
+    .mkai-page-config .sc-profile__badge--ok {
+      background: rgba(22, 163, 74, 0.16);
+      border: 1px solid rgba(22, 163, 74, 0.22);
+      color: var(--mk-success, #16a34a);
+    }
+    .mkai-page-config .sc-profile__badge--off {
+      background: rgba(148, 163, 184, 0.28);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      color: #64748b;
+    }
+    .mkai-page-config .sc-profile__hint {
+      margin: 10px 0 0;
+      font-size: 12px;
+      color: var(--mk-muted, #888);
+      line-height: 1.45;
+    }
+    .mkai-page-config .sc-ns-banner {
+      margin: 0 0 12px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px dashed color-mix(in srgb, var(--mk-primary, #3b82f6) 45%, transparent);
+      background: color-mix(in srgb, var(--mk-primary, #3b82f6) 8%, transparent);
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--mk-text, #222);
+    }
+    .mkai-page-config .sc-kb-fold {
+      margin: 12px 0 16px;
+      border: 1px solid var(--glass-border-soft);
+      border-radius: 14px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      overflow: hidden;
+    }
+    .mkai-page-config .sc-kb-fold__summary {
+      list-style: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 12px 14px;
+      user-select: none;
+      font-weight: 600;
+    }
+    .mkai-page-config .sc-kb-fold__summary::-webkit-details-marker { display: none; }
+    .mkai-page-config .sc-kb-fold__summary::after {
+      content: '▸';
+      opacity: 0.55;
+      transition: transform .15s ease;
+      font-size: 12px;
+    }
+    .mkai-page-config .sc-kb-fold[open] > .sc-kb-fold__summary::after {
+      transform: rotate(90deg);
+    }
+    .mkai-page-config .sc-kb-fold__title { flex: 1; }
+    .mkai-page-config .sc-kb-fold__meta {
+      font-size: 12px;
+      font-weight: 500;
+      opacity: 0.65;
+    }
+    .mkai-page-config .sc-kb-fold__body {
+      padding: 0 12px 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.28);
+    }
+    .mkai-page-config .sc-sticker-gallery-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .mkai-page-config .sc-sticker-card {
+      border: 1px solid var(--glass-border-soft);
+      border-radius: 12px;
+      padding: 12px;
+      background: var(--glass-bg-soft);
+      backdrop-filter: blur(6px);
+    }
+    .mkai-page-config .sc-sticker-card__head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .mkai-page-config .sc-sticker-card__title {
+      font-weight: 650;
+      margin: 0 0 4px;
+    }
+    .mkai-page-config .sc-sticker-card__desc {
+      margin: 0;
+      font-size: 12px;
+      opacity: 0.72;
+      line-height: 1.45;
+    }
+    .mkai-page-config .sc-sticker-progress {
+      margin-top: 10px;
+      display: block;
+    }
+    .mkai-page-config .sc-sticker-progress__track {
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.08);
+      overflow: hidden;
+    }
+    .mkai-page-config .sc-sticker-progress__fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #14b8a6, #22c55e);
+      transition: width .2s ease;
+    }
+    .mkai-page-config .sc-sticker-progress__meta {
+      margin-top: 6px;
+      font-size: 12px;
+      opacity: 0.78;
+      line-height: 1.4;
+    }
+    .mkai-page-config .sc-kb-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      margin-top: 12px;
+      position: relative;
+      padding-left: 18px;
+    }
+    .mkai-page-config .sc-kb-list::before {
+      content: '';
+      position: absolute;
+      left: 5px;
+      top: 8px;
+      bottom: 8px;
+      width: 2px;
+      border-radius: 2px;
+      background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--mk-primary, #3b82f6) 70%, transparent),
+        color-mix(in srgb, var(--mk-border, #ddd) 80%, transparent)
+      );
+    }
+    .mkai-page-config .sc-kb-row {
+      display: flex;
+      flex-direction: row;
+      align-items: stretch;
+      gap: 12px;
+      padding: 12px 14px;
+      margin: 8px 0;
+      border-radius: 12px;
+      border: 1px solid var(--glass-border-soft);
+      background: var(--glass-bg);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      min-width: 0;
+      position: relative;
+      transition: background .18s ease;
+    }
+    .mkai-page-config .sc-kb-row:hover { background: var(--glass-bg-hover); }
+    .mkai-page-config .sc-kb-row::before {
+      content: '';
+      position: absolute;
+      left: -16px;
+      top: 50%;
+      width: 12px;
+      height: 2px;
+      background: color-mix(in srgb, var(--mk-primary, #3b82f6) 55%, var(--mk-border, #ddd));
+    }
+    .mkai-page-config .sc-kb-row::after {
+      content: '';
+      position: absolute;
+      left: -20px;
+      top: calc(50% - 4px);
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      border: 2px solid color-mix(in srgb, var(--mk-primary, #3b82f6) 75%, transparent);
+      background: rgba(255, 255, 255, 0.55);
+      box-sizing: border-box;
+    }
+    .mkai-page-config .sc-kb-row.is-builtin {
+      border-color: rgba(96, 165, 250, 0.4);
+      background: rgba(59, 130, 246, 0.10);
+    }
+    .mkai-page-config .sc-kb-row.is-builtin::after {
+      background: rgba(59, 130, 246, 0.85);
+      border-color: rgba(59, 130, 246, 0.9);
+    }
+    .mkai-page-config .sc-kb-row.is-off {
+      opacity: 0.72;
+    }
+    .mkai-page-config .sc-kb-row.is-off::after {
+      background: color-mix(in srgb, var(--mk-border, #ddd) 80%, #fff);
+      border-color: var(--mk-border, #ddd);
+    }
+    .mkai-page-config .sc-kb-row__body {
+      flex: 1;
+      min-width: 0;
+      cursor: pointer;
+    }
+    .mkai-page-config .sc-kb-row.is-builtin .sc-kb-row__body {
+      cursor: default;
+    }
+    .mkai-page-config .sc-kb-row__meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      margin: 0 0 6px;
+    }
+    .mkai-page-config .sc-kb-row__badge {
+      display: inline-flex;
+      align-items: center;
+      font-size: 11px;
+      font-weight: 650;
+      letter-spacing: 0.02em;
+      padding: 2px 7px;
+      border-radius: 999px;
+      border: 1px solid color-mix(in srgb, var(--mk-primary, #3b82f6) 40%, transparent);
+      color: color-mix(in srgb, var(--mk-primary, #3b82f6) 85%, var(--mk-text, #222));
+      background: color-mix(in srgb, var(--mk-primary, #3b82f6) 12%, transparent);
+    }
+    .mkai-page-config .sc-kb-row__badge--custom {
+      border-color: color-mix(in srgb, var(--mk-border, #ddd) 90%, transparent);
+      color: color-mix(in srgb, var(--mk-text, #222) 70%, transparent);
+      background: color-mix(in srgb, var(--mk-border, #ddd) 18%, transparent);
+    }
+    .mkai-page-config .sc-kb-row__title {
+      font-size: 14px;
+      font-weight: 650;
+      color: var(--mk-text, #222);
+      margin: 0;
+      word-break: break-word;
+    }
+    .mkai-page-config .sc-kb-row__content {
+      font-size: 12px;
+      line-height: 1.45;
+      color: color-mix(in srgb, var(--mk-text, #222) 62%, transparent);
+      margin-top: 6px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      max-height: 4.5em;
+      overflow: hidden;
+    }
+    .mkai-page-config .sc-kb-row__side {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .mkai-page-config .sc-kb-tree-hint {
+      margin: 0 0 4px;
+      font-size: 12px;
+      line-height: 1.5;
+      color: color-mix(in srgb, var(--mk-text, #222) 65%, transparent);
+    }
+    .mkai-page-config .sc-kb-cap {
+      position: relative;
+      width: 42px;
+      height: 24px;
+      border: 0;
+      border-radius: 999px;
+      padding: 0;
+      cursor: pointer;
+      background: color-mix(in srgb, var(--mk-border, #ddd) 80%, #999);
+      flex-shrink: 0;
+    }
+    .mkai-page-config .sc-kb-cap.is-on {
+      background: color-mix(in srgb, var(--mk-primary, #3b82f6) 85%, #2563eb);
+    }
+    .mkai-page-config .sc-kb-cap__knob {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #fff;
+      transition: transform .15s ease;
+      box-shadow: 0 1px 2px rgba(0,0,0,.18);
+    }
+    .mkai-page-config .sc-kb-cap.is-on .sc-kb-cap__knob {
+      transform: translateX(18px);
+    }
+    .mkai-page-config .sc-kb-cap__label {
+      font-size: 12px;
+      color: color-mix(in srgb, var(--mk-text, #222) 70%, transparent);
+    }
+    /* 全局胶囊开关（弹窗等页外也可用） */
+    .sc-kb-cap {
+      position: relative;
+      width: 46px;
+      height: 26px;
+      border-radius: 999px;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      background: color-mix(in srgb, #94a3b8 45%, #e2e8f0);
+      transition: background 0.2s ease;
+      flex-shrink: 0;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    html.dark .sc-kb-cap {
+      background: color-mix(in srgb, #64748b 55%, #1e293b);
+    }
+    .sc-kb-cap.is-on {
+      background: color-mix(in srgb, var(--mk-success, #16a34a) 88%, #86efac);
+    }
+    .sc-kb-cap__knob {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,.18);
+      transition: transform 0.2s ease;
+      pointer-events: none;
+    }
+    .sc-kb-cap.is-on .sc-kb-cap__knob {
+      transform: translateX(20px);
+    }
+    .sc-kb-cap__label {
+      font-size: 11px;
+      color: var(--mk-muted, #888);
+      flex-shrink: 0;
+      min-width: 2em;
+    }
+    .mkai-ai-only-modal .sc-ai-only-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--mk-border);
+      background: color-mix(in srgb, var(--mk-surface-muted) 50%, var(--mk-surface));
+    }
+    .mkai-ai-only-modal .sc-ai-only-row__text {
+      flex: 1;
+      min-width: 0;
+    }
+    .mkai-ai-only-modal .sc-ai-only-row__title {
+      display: block;
+      font-size: 14px;
+      font-weight: 650;
+      color: var(--mk-text);
+    }
+    .mkai-ai-only-modal .sc-ai-only-row__desc {
+      display: block;
+      margin-top: 4px;
+      font-size: 12px;
+      line-height: 1.45;
+      color: var(--mk-text-muted);
+    }
+    .mkai-ai-only-modal .sc-ai-only-rounds {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid color-mix(in srgb, var(--mk-border, #334) 80%, transparent);
+    }
+    .mkai-ai-only-modal .sc-ai-only-rounds .mk-label {
+      display: block;
+      margin-bottom: 6px;
+    }
+    .mkai-ai-only-modal .sc-ai-only-rounds .mk-hint {
+      margin: 6px 0 0;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .mkai-ai-only-modal .sc-ai-only-row__switch {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    /* 智能对话 · 聊天开关卡片主题 */
+    .mkai-page-switch .mk-switch-list { gap: 10px; }
+    .mkai-page-switch .mk-entity-card {
+      position: relative;
+      border-radius: 14px;
+      padding: 13px 14px;
+      min-height: 88px;
+      overflow: hidden;
+      background: var(--glass-bg);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid var(--glass-border-soft);
+      transition: border-color 0.22s ease, box-shadow 0.22s ease, background 0.22s ease, transform 0.18s ease;
+    }
+    .mkai-page-switch .mk-entity-card__name-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+    .mkai-page-switch .mk-entity-card__name {
+      min-width: 0;
+      flex: 1;
+    }
+    /* 群聊开启：冷蓝青，贴合深色底 */
+    .mkai-page-switch .mk-entity-card.is-enabled.is-group {
+      border-color: rgba(56, 189, 248, 0.42);
+      background: linear-gradient(
+        135deg,
+        rgba(14, 165, 233, 0.16) 0%,
+        rgba(255, 255, 255, 0.18) 100%
+      );
+      box-shadow:
+        0 0 0 1px rgba(56, 189, 248, 0.16),
+        0 8px 22px rgba(14, 165, 233, 0.12);
+    }
+    .mkai-page-switch .mk-entity-card.is-enabled.is-group::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 10px;
+      bottom: 10px;
+      width: 3px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, #7dd3fc, #0284c7);
+    }
+    .mkai-page-switch .mk-entity-card.is-enabled.is-group .mk-entity-card__avatar {
+      box-shadow: 0 0 0 2px color-mix(in srgb, #38bdf8 45%, transparent);
+    }
+    .mkai-page-switch .mk-entity-card.is-enabled.is-group .mk-entity-card__name {
+      color: #bae6fd;
+    }
+    /* 好友开启：暖玫瑰，与群聊区分 */
+    .mkai-page-switch .mk-entity-card.is-enabled.is-friend {
+      border-color: rgba(244, 114, 182, 0.40);
+      background: linear-gradient(
+        135deg,
+        rgba(236, 72, 153, 0.14) 0%,
+        rgba(255, 255, 255, 0.18) 100%
+      );
+      box-shadow:
+        0 0 0 1px rgba(244, 114, 182, 0.14),
+        0 8px 22px rgba(219, 39, 119, 0.10);
+    }
+    .mkai-page-switch .mk-entity-card.is-enabled.is-friend::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 10px;
+      bottom: 10px;
+      width: 3px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, #f9a8d4, #db2777);
+    }
+    .mkai-page-switch .mk-entity-card.is-enabled.is-friend .mk-entity-card__avatar {
+      box-shadow: 0 0 0 2px color-mix(in srgb, #f472b6 42%, transparent);
+    }
+    .mkai-page-switch .mk-entity-card.is-enabled.is-friend .mk-entity-card__name {
+      color: #fbcfe8;
+    }
+    html:not(.dark) .mkai-page-switch .mk-entity-card.is-enabled.is-group .mk-entity-card__name {
+      color: #0369a1;
+    }
+    html:not(.dark) .mkai-page-switch .mk-entity-card.is-enabled.is-friend .mk-entity-card__name {
+      color: #be185d;
+    }
+    @media (hover: hover) {
+      .mkai-page-switch .mk-entity-card.is-enabled.is-group:hover {
+        transform: translateY(-1px);
+        box-shadow:
+          0 0 0 1px color-mix(in srgb, #38bdf8 22%, transparent),
+          0 10px 26px color-mix(in srgb, #0ea5e9 18%, transparent);
+      }
+      .mkai-page-switch .mk-entity-card.is-enabled.is-friend:hover {
+        transform: translateY(-1px);
+        box-shadow:
+          0 0 0 1px color-mix(in srgb, #f472b6 20%, transparent),
+          0 10px 26px color-mix(in srgb, #db2777 16%, transparent);
+      }
+    }
+    .mkai-page-config .sc-kb-hint {
+      margin: 0 0 10px;
+      font-size: 12px;
+      color: var(--mk-muted, #888);
+      line-height: 1.45;
+    }
+    .mkai-page-config .sc-param-box {
+      margin: 0 0 14px;
+      padding: 14px 12px 16px;
+      border: 1px solid rgba(15, 23, 42, 0.1);
+      border-radius: 14px;
+      background: #f8fafc;
+      text-align: center;
+    }
+    .mkai-page-config .sc-param-box__title {
+      display: block;
+      margin: 0 0 12px;
+      font-weight: 600;
+      text-align: center;
+    }
+    .mkai-page-config .sc-param-grid {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 12px 14px;
+      width: 100%;
+      align-items: start;
+    }
+    .mkai-page-config .sc-param-grid .mk-form-group {
+      margin: 0;
+      width: 100%;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    .mkai-page-config .sc-param-grid .mk-label {
+      margin: 0;
+      width: 100%;
+      text-align: center;
+      line-height: 1.3;
+    }
+    .mkai-page-config .sc-param-grid .mk-input {
+      width: 100%;
+      text-align: center;
+      box-sizing: border-box;
+    }
+    @media (max-width: 900px) {
+      .mkai-page-config .sc-param-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+    @media (max-width: 520px) {
+      .mkai-page-config .sc-param-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+    .mkai-page-config .sc-provider-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    @media (max-width: 900px) {
+      .mkai-page-config .sc-provider-grid { grid-template-columns: 1fr; }
+    }
+    .mkai-page-config .sc-provider-card {
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1px solid rgba(15, 23, 42, 0.12);
+      background: #ffffff;
+      opacity: 1;
+      transition: border-color .15s, box-shadow .15s, background .15s;
+      box-shadow: 0 2px 8px rgba(15, 40, 80, 0.04);
+    }
+    .mkai-page-config .sc-provider-card.is-configured {
+      border-color: rgba(20, 184, 166, 0.4);
+      background: #f0fdfa;
+      box-shadow: 0 0 0 1px rgba(20, 184, 166, 0.08);
+    }
+    .mkai-page-config .sc-provider-card--warn {
+      border-color: color-mix(in srgb, #c2410c 45%, transparent);
+    }
+    .mkai-page-config .sc-provider-card__top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .mkai-page-config .sc-provider-card__badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.28);
+      color: #64748b;
+    }
+    .mkai-page-config .sc-provider-card.is-configured .sc-provider-card__badge {
+      background: color-mix(in srgb, var(--mk-success, #16a34a) 18%, transparent);
+      color: var(--mk-success, #16a34a);
+    }
+    .mkai-page-config .sc-provider-card__links {
+      margin: 0 0 8px;
+      font-size: 12px;
+      line-height: 1.45;
+      word-break: break-all;
+    }
+    .mkai-page-config .sc-provider-card__warn {
+      margin: 0 0 8px;
+      font-size: 12px;
+      line-height: 1.45;
+      color: #c2410c;
+    }
+    .mkai-page-config .sc-provider-card__status {
+      font-size: 12px;
+      margin-left: 4px;
+    }
+    .mkai-page-config .sc-provider-card__status.is-ok { color: var(--mk-success, #16a34a); }
+    .mkai-page-config .sc-provider-card__status.is-err { color: #dc2626; }
+
+/* entity card + toggle — 液态玻璃 */
+.mkai-admin .mk-entity-card {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 14px; border-radius: 14px; position: relative; overflow: hidden;
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  box-shadow: 0 2px 8px rgba(15, 40, 80, 0.04);
+}
+.mkai-admin .mk-entity-card__main { display:flex; align-items:center; gap:12px; min-width:0; flex:1; }
+.mkai-admin .mk-entity-card__avatar {
+  width: 44px; height: 44px; border-radius: 12px; border:0; padding:0; overflow:hidden;
+  background: rgba(255,255,255,.28); cursor:pointer; display:flex; align-items:center; justify-content:center;
+  font-weight:700; color: #64748b; flex-shrink:0;
+}
+.mkai-admin .mk-entity-card__avatar-img { width:100%; height:100%; object-fit:cover; display:block; }
+.mkai-admin .mk-entity-card__text { min-width:0; }
+.mkai-admin .mk-entity-card__name { font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#1e293b; }
+.mkai-admin .mk-entity-card__id { font-size:12px; color: #64748b; margin-top:2px; }
+.mkai-admin .mk-entity-card__toggle { flex-shrink:0; }
+.mkai-admin .toggle-switch { position:relative; display:inline-block; width:46px; height:26px; }
+.mkai-admin .toggle-switch input { opacity:0; width:0; height:0; }
+.mkai-admin .toggle-slider {
+  position:absolute; cursor:pointer; inset:0; background: rgba(100,116,139,.28); border-radius:999px; transition:.2s;
+  border: 1px solid rgba(255,255,255,.35);
+}
+.mkai-admin .toggle-slider:before {
+  content:''; position:absolute; height:20px; width:20px; left:3px; top:2px; background:#fff; border-radius:50%; transition:.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,.18);
+}
+.mkai-admin .toggle-switch input:checked + .toggle-slider {
+  background: rgba(20, 184, 166, 0.8);
+  border-color: rgba(45, 212, 191, 0.55);
+}
+.mkai-admin .toggle-switch input:checked + .toggle-slider:before { transform: translateX(20px); }
+.mkai-admin .sc-kb-row {
+  display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+  padding:12px 14px; border-radius:12px;
+  background: #ffffff;
+  border:1px solid rgba(15, 23, 42, 0.1);
+  margin-bottom:8px;
+  transition: background .18s ease, border-color .18s ease;
+}
+.mkai-admin .sc-kb-row:hover { background: #f8fafc; border-color: rgba(15, 23, 42, 0.16); }
+.mkai-admin .sc-kb-row__main { min-width:0; flex:1; }
+.mkai-admin .sc-sticker-card {
+  padding:12px 14px; border-radius:12px;
+  background: #ffffff;
+  border:1px solid rgba(15, 23, 42, 0.1);
+  margin-bottom:8px;
+}
+.mkai-admin .sc-sticker-card__top { display:flex; justify-content:space-between; gap:8px; margin-bottom:8px; align-items: center; }
+.mkai-admin .sc-sticker-progress { margin: 10px 0; display: block; }
+.mkai-admin .sc-sticker-progress__track {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+}
+.mkai-admin .sc-sticker-progress__fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #14b8a6, #22c55e);
+  transition: width .2s ease;
+}
+.mkai-admin .sc-sticker-progress__meta {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.4;
+}
+.mkai-admin .sc-sticker-card__source {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+/* ---- 安装源选择弹窗（表情图库） ---- */
+.mkai-admin .sc-source-modal { width: min(480px, 100%); }
+.mkai-admin .sc-source-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.mkai-admin .sc-source-opt {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: #ffffff;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: border-color .16s ease, background .16s ease, box-shadow .16s ease;
+}
+.mkai-admin .sc-source-opt:hover { background: #f8fafc; border-color: rgba(15, 23, 42, 0.2); }
+.mkai-admin .sc-source-opt.is-active {
+  border-color: #14b8a6;
+  background: rgba(20, 184, 166, 0.06);
+  box-shadow: 0 0 0 1px rgba(20, 184, 166, 0.35) inset;
+}
+.mkai-admin .sc-source-opt__radio {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  border-radius: 50%;
+  border: 2px solid rgba(15, 23, 42, 0.25);
+  background: #fff;
+  position: relative;
+}
+.mkai-admin .sc-source-opt.is-active .sc-source-opt__radio { border-color: #14b8a6; }
+.mkai-admin .sc-source-opt.is-active .sc-source-opt__radio::after {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: #14b8a6;
+}
+.mkai-admin .sc-source-opt__body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.mkai-admin .sc-source-opt__label { font-size: 13px; font-weight: 650; }
+.mkai-admin .sc-source-opt__desc { font-size: 12px; color: #64748b; line-height: 1.45; }
+
+/* 低端设备/减少透明：弹窗内的实心卡片不参与毛玻璃降级（本来就无 blur），
+   这里只跟随系统偏好把深色遮罩加深一档，保证对比度。 */
+@media (prefers-reduced-transparency: reduce) {
+  .mkai-admin .sc-source-opt { background: #ffffff; }
+}
+
+@media (max-width: 760px) {
+  .mkai-admin .sc-kb-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .mkai-admin .sc-kb-row__actions {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 8px;
+    width: 100%;
+    align-items: center;
+  }
+  .mkai-admin .sc-kb-row__actions .mk-btn { width: 100%; }
+  .mkai-admin .sc-kb-row__actions .toggle-switch { justify-self: end; }
+}
+.mkai-admin .sc-kb-cap {
+  width:46px; height:26px; border:1px solid rgba(255,255,255,.35); border-radius:999px;
+  background: rgba(100,116,139,.28); position:relative; cursor:pointer; padding:0;
+}
+.mkai-admin .sc-kb-cap.is-on {
+  background: rgba(20, 184, 166, 0.8);
+  border-color: rgba(45, 212, 191, 0.55);
+}
+.mkai-admin .sc-kb-cap__knob {
+  position:absolute; top:2px; left:3px; width:20px; height:20px; border-radius:50%; background:#fff;
+  transition: transform .2s; box-shadow:0 1px 3px rgba(0,0,0,.18);
+}
+.mkai-admin .sc-kb-cap.is-on .sc-kb-cap__knob { transform: translateX(20px); }
+.mkai-admin .sc-kb-cap__label { font-size:12px; font-weight:650; margin-left:6px; color:#475569; }
+
+/* —— 会话管理 / 消息聊天（参考 GF_mk IM） —— */
+.mkai-admin .mkai-page-sessions {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+}
+.mkai-admin .mkai-page-sessions.is-chat {
+  flex: 1;
+  height: 100%;
+  min-height: 0;
+}
+.mkai-admin .im-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+  width: 100%;
+}
+.mkai-admin .im-shell-page {
+  min-height: min(72vh, 720px);
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  border-radius: 16px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(14px) saturate(1.15);
+  -webkit-backdrop-filter: blur(14px) saturate(1.15);
+  box-shadow: 0 8px 28px rgba(148, 163, 184, 0.12);
+}
+.mkai-admin .mkai-page-sessions.is-chat .im-shell-page {
+  min-height: 0;
+  flex: 1;
+  border-radius: 0;
+  border: 0;
+  box-shadow: none;
+}
+.mkai-admin .im-list-full,
+.mkai-admin .im-pane-full {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+.mkai-admin .im-list-head {
+  display: flex;
+  gap: 8px;
+  padding: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.08);
+}
+.mkai-admin .im-list-head input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(6px);
+  border-radius: 12px;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 13px;
+  color: #334155;
+}
+.mkai-admin .im-list-head input::placeholder { color: #94a3b8; }
+.mkai-admin .im-sessions {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.mkai-admin .im-session {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  cursor: pointer;
+  border-radius: 14px;
+  border: 1.5px solid rgba(148, 163, 184, 0.45);
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 4px 14px rgba(148, 163, 184, 0.1);
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+.mkai-admin .im-session.is-active {
+  border-color: rgba(22, 163, 74, 0.72);
+  box-shadow: 0 4px 14px rgba(22, 163, 74, 0.12);
+}
+.mkai-admin .im-session.is-stale {
+  border-color: rgba(148, 163, 184, 0.7);
+  opacity: 0.92;
+}
+.mkai-admin .im-session:hover {
+  background: rgba(255, 255, 255, 0.28);
+  box-shadow: 0 8px 20px rgba(148, 163, 184, 0.16);
+}
+.mkai-admin .im-session.is-active:hover {
+  border-color: rgba(22, 163, 74, 0.9);
+}
+.mkai-admin .im-session.is-stale:hover {
+  border-color: rgba(100, 116, 139, 0.85);
+}
+.mkai-admin .im-session-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.mkai-admin .im-session-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.mkai-admin .im-session-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f766e;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mkai-admin .im-session-bottom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.mkai-admin .im-session-preview {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: #64748b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mkai-admin .im-type,
+.mkai-admin .im-pane-type {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  letter-spacing: 0.02em;
+}
+.mkai-admin .im-type.group,
+.mkai-admin .im-pane-type.group {
+  background: rgba(186, 230, 253, 0.75);
+  border-color: rgba(56, 189, 248, 0.35);
+  color: #0369a1;
+}
+.mkai-admin .im-type.private,
+.mkai-admin .im-pane-type.private {
+  background: rgba(254, 205, 211, 0.75);
+  border-color: rgba(251, 113, 133, 0.35);
+  color: #be123c;
+}
+.mkai-admin .im-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f766e;
+  background: rgba(20, 184, 166, 0.16);
+  border: 1px solid rgba(45, 212, 191, 0.35);
+  flex-shrink: 0;
+  user-select: none;
+}
+.mkai-admin .im-avatar.out {
+  color: #fff;
+  background: rgba(20, 184, 166, 0.85);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+.mkai-admin .im-msg .im-avatar {
+  width: 36px;
+  height: 36px;
+  font-size: 13px;
+}
+.mkai-admin .im-pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  background: rgba(255, 255, 255, 0.12);
+}
+.mkai-admin .im-pane-head {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  flex-shrink: 0;
+  min-height: 56px;
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.mkai-admin .im-pane-title {
+  font-weight: 700;
+  color: #1e293b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mkai-admin .im-pane-sub {
+  font-size: 12px;
+  color: #94a3b8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mkai-admin .im-back {
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(6px);
+  border-radius: 10px;
+  padding: 7px 12px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f766e;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+}
+.mkai-admin .im-back:hover {
+  background: rgba(255, 255, 255, 0.38);
+  transform: translateX(-1px);
+}
+.mkai-admin .im-messages {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: transparent;
+}
+.mkai-admin .im-empty {
+  margin: auto;
+  padding: 12px 20px;
+  color: #94a3b8;
+  font-size: 13px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 12px;
+  backdrop-filter: blur(6px);
+}
+.mkai-admin .im-sys {
+  align-self: center;
+  max-width: 86%;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: #64748b;
+  background: rgba(255, 255, 255, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+}
+.mkai-admin .im-msg {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  gap: 10px;
+  max-width: 78%;
+  align-self: flex-start;
+}
+.mkai-admin .im-msg.out {
+  grid-template-columns: 1fr 36px;
+  align-self: flex-end;
+}
+.mkai-admin .im-msg.out .im-avatar { order: 2; }
+.mkai-admin .im-msg.out .im-msg-body { order: 1; text-align: right; }
+.mkai-admin .im-msg-head {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+.mkai-admin .im-msg.out .im-msg-head { justify-content: flex-end; }
+.mkai-admin .im-msg-name { font-size: 13px; font-weight: 600; color: #475569; }
+.mkai-admin .im-msg-role {
+  font-size: 10px;
+  font-weight: 600;
+  color: #64748b;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.16);
+}
+.mkai-admin .im-msg-time { font-size: 10px; color: #94a3b8; }
+/* 群头衔徽标：与群身份区分色；没头衔时组件不渲染 */
+.mkai-admin .im-msg-title {
+  font-size: 10px;
+  font-weight: 600;
+  color: #0f766e;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(13, 148, 136, 0.14);
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mkai-admin .im-msg-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 4px;
+  max-width: 100%;
+}
+.mkai-admin .im-msg.out .im-msg-meta { justify-content: flex-end; }
+.mkai-admin .im-msg-meta__chip {
+  display: inline-block;
+  max-width: 100%;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.mkai-admin .im-msg-meta__chip--reply {
+  color: #475569;
+  background: rgba(148, 163, 184, 0.14);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+}
+.mkai-admin .im-msg-meta__chip--at {
+  color: #0f766e;
+  background: rgba(20, 184, 166, 0.1);
+  border: 1px solid rgba(20, 184, 166, 0.22);
+}
+.mkai-admin .im-bubble {
+  margin-top: 0;
+  display: inline-block;
+  max-width: 100%;
+  background: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 1rem;
+  border-top-left-radius: 4px;
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.55;
+  text-align: left;
+  color: #1e293b;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  box-shadow: 0 4px 14px rgba(148, 163, 184, 0.12);
+  white-space: pre-wrap;
+}
+.mkai-admin .im-msg.out .im-bubble {
+  background: rgba(20, 184, 166, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 1rem;
+  border-top-right-radius: 4px;
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(20, 184, 166, 0.22);
+}
+.mkai-admin .im-bubble--meta {
+  opacity: 0.92;
+  font-size: 12px;
+}
+.mkai-admin .im-bubble-text {
+  display: block;
+}
+/* 语音气泡：正文前挂一个扬声器，跟普通文字气泡区分开 */
+.mkai-admin .im-bubble--voice .im-bubble-text {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+.mkai-admin .im-bubble--voice .im-bubble-text::before {
+  content: '🔊';
+  flex-shrink: 0;
+  font-size: 13px;
+  line-height: inherit;
+  opacity: 0.85;
+}
+.mkai-admin .im-bubble-eyes {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(100, 116, 139, 0.35);
+  font-size: 11px;
+  line-height: 1.45;
+  color: #64748b;
+}
+.mkai-admin .im-msg.out .im-bubble-eyes {
+  border-top-color: rgba(255, 255, 255, 0.35);
+  color: rgba(255, 255, 255, 0.88);
+}
+.mkai-admin .im-bubble-eyes__line + .im-bubble-eyes__line {
+  margin-top: 4px;
+}
+.mkai-admin .im-scroll-anchor { height: 1px; width: 100%; flex-shrink: 0; }
+
+@media (max-width: 860px) {
+  .mkai-admin .mkai-page-sessions.is-chat .im-shell-page {
+    min-height: calc(100dvh - 64px);
+  }
+  .mkai-admin .im-msg { max-width: 92%; }
+  /* 移动端头衔可能很长，压缩宽度避免把昵称/QQ 挤到换行 */
+  .mkai-admin .im-msg-title { max-width: 88px; }
+}
+
+/* =========================================================================
+   自定义动态光标（仅 PC 桌面端；作用域严格限制在本插件面板 .mkai-admin 内）
+   移动端/触屏由组件层 return null，不渲染、不注册事件
+   ========================================================================= */
+
+/* 仅当组件挂上 .mkai-cursor-on 时，隐藏“面板内”的原生光标；面板外不受影响 */
+.mkai-admin.mkai-cursor-on,
+.mkai-admin.mkai-cursor-on * {
+  cursor: none !important;
+}
+
+.mkai-admin .mkai-cursor {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 32px;
+  height: 32px;
+  z-index: 2147483000;
+  pointer-events: none !important; /* 必须：点击穿透表单/按钮/下拉 */
+  will-change: transform, opacity; /* GPU 合成，位移只用 translate3d */
+  display: grid;
+  place-items: center;
+  transition: opacity .18s ease; /* 仅淡入淡出用过渡；位移交给 rAF，勿加 transform 过渡 */
+}
+.mkai-admin .mkai-cursor__ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid rgba(15, 118, 110, .85);
+  background: rgba(20, 184, 166, 0);
+  box-shadow: 0 0 10px rgba(20, 184, 166, .32);
+  transition: transform .16s ease, border-color .16s ease, background-color .16s ease;
+}
+.mkai-admin .mkai-cursor__dot {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(15, 118, 110, .95);
+  transition: transform .16s ease, opacity .16s ease;
+}
+
+/* hover 交互元素（按钮/链接/输入等）：外环放大、中心点淡出 */
+.mkai-admin .mkai-cursor.is-active .mkai-cursor__ring {
+  transform: scale(1.55);
+  border-color: rgba(20, 184, 166, .95);
+  background: rgba(20, 184, 166, .12);
+}
+.mkai-admin .mkai-cursor.is-active .mkai-cursor__dot {
+  transform: scale(.4);
+  opacity: .5;
+}
+/* 鼠标按下：整体轻微回缩 */
+.mkai-admin .mkai-cursor.is-press .mkai-cursor__ring {
+  transform: scale(.82);
+}
+
+/* 触屏/粗指针兜底：即使意外渲染也强制隐藏并交还原生光标 */
+@media (hover: none), (pointer: coarse) {
+  .mkai-admin .mkai-cursor { display: none !important; }
+  .mkai-admin.mkai-cursor-on,
+  .mkai-admin.mkai-cursor-on * { cursor: auto !important; }
+}
+/* 无障碍：减少动态时关掉缩放过渡（跟随位移本身不影响键盘操作） */
+@media (prefers-reduced-motion: reduce) {
+  .mkai-admin .mkai-cursor__ring,
+  .mkai-admin .mkai-cursor__dot { transition: none; }
+}
+
+/* =========================================================================
+   概览页（overview）+ 图表基元样式 —— 设备无关，桌面 / 手机两套壳共用
+   ========================================================================= */
+.mkai-admin .mkai-page-overview { width: 100%; max-width: none; }
+.mkai-admin .ov-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  /* 各行卡片按内容高度，不随同行最高项被撑空 */
+  align-items: start;
+}
+.mkai-admin .mkai-page-overview .mk-panel-head {
+  padding: 10px 16px 6px;
+  flex-shrink: 0;
+}
+.mkai-admin .mkai-page-overview .mk-panel-body {
+  padding: 10px 16px 14px;
+}
+.mkai-admin .ov-card {
+  min-height: 0;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+}
+.mkai-admin .ov-card > .mk-panel-body {
+  flex: 0 0 auto;
+}
+.mkai-admin .ov-card--wide,
+.mkai-admin .ov-card--span2 { grid-column: span 2; }
+.mkai-admin .ov-card--full { grid-column: 1 / -1; }
+.mkai-admin .ov-card--kpi-row {
+  min-height: 0;
+}
+.mkai-admin .ov-card--kpi-row .mk-panel-body {
+  padding: 12px 16px;
+}
+.mkai-admin .ov-kpi--footer .ov-kpi__cell {
+  align-items: center;
+  text-align: center;
+}
+.mkai-admin .ov-card__title {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--mk-text);
+  letter-spacing: 0.01em;
+  line-height: 1.3;
+}
+.mkai-admin .ov-card__chart {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+  min-height: 0;
+}
+/* 单列小图卡片：图表水平居中，但不额外撑高 */
+.mkai-admin .ov-card:not(.ov-card--span2):not(.ov-card--wide) .ov-card__chart {
+  justify-content: center;
+}
+.mkai-admin .ov-kpi { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.mkai-admin .ov-kpi__cell { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.mkai-admin .ov-kpi__num {
+  font-size: 1.6rem;
+  font-weight: 780;
+  line-height: 1.1;
+  color: var(--mk-text);
+  font-variant-numeric: tabular-nums;
+}
+.mkai-admin .ov-kpi__num--sm { font-size: 1.15rem; }
+.mkai-admin .ov-kpi__label { font-size: 12px; color: var(--mk-text-muted); }
+.mkai-admin .ov-inline-kpi { display: grid; grid-template-columns: repeat(2, auto); gap: 8px 20px; }
+.mkai-admin .ov-inline-kpi--even {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px 10px;
+  width: 100%;
+  max-width: 360px;
+}
+.mkai-admin .ov-inline-kpi--even .ov-kpi__cell {
+  align-items: center;
+  text-align: center;
+}
+/* Token + 会话综合卡：两列等宽、内容居中均匀分布 */
+.mkai-admin .ov-usage-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 20px;
+}
+.mkai-admin .ov-usage-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  min-width: 0;
+  padding: 2px 6px;
+}
+.mkai-admin .ov-usage-col + .ov-usage-col {
+  border-left: 1px solid rgba(15, 23, 42, 0.08);
+}
+.mkai-admin .ov-usage-col__label {
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--mk-text-muted);
+  letter-spacing: 0.02em;
+  text-align: center;
+  width: 100%;
+}
+.mkai-admin .ov-usage-donut {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  max-width: calc(var(--mk-donut-px, 132) * 1px);
+  margin-inline: auto;
+}
+.mkai-admin .mk-chart--donut {
+  --mk-donut-px: 132;
+  flex-shrink: 0;
+}
+.mkai-admin .mk-chart--donut .mk-chart__num {
+  font-size: clamp(11px, calc(var(--mk-donut-px) * 0.152px), 22px);
+}
+.mkai-admin .mk-chart--donut .mk-chart__sub {
+  font-size: clamp(9px, calc(var(--mk-donut-px) * 0.085px), 13px);
+}
+.mkai-admin .ov-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--mk-text-muted);
+}
+.mkai-admin .ov-legend li { display: flex; align-items: center; gap: 7px; }
+.mkai-admin .ov-legend i { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.mkai-admin .ov-bignum { font-size: 1.5rem; font-weight: 760; text-align: center; color: var(--mk-text); }
+.mkai-admin .ov-bignum--warn { color: var(--mk-warn); }
+.mkai-admin .ov-bignum--muted { color: var(--mk-muted); }
+.mkai-admin .ov-caps { margin-top: 14px; }
+.mkai-admin .ov-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 18px; margin: 0; }
+.mkai-admin .ov-meta > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.mkai-admin .ov-meta dt { font-size: 11px; color: var(--mk-text-muted); }
+.mkai-admin .ov-meta dd {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 650;
+  color: var(--mk-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mkai-admin .mk-chart { display: block; }
+.mkai-admin .mk-chart--donut-interactive .mk-chart__seg {
+  cursor: pointer;
+  transition: opacity var(--mk-dur-fast, 0.16s) ease, filter var(--mk-dur-fast, 0.16s) ease;
+  outline: none;
+}
+.mkai-admin .mk-chart--donut-interactive .mk-chart__seg.is-dim {
+  opacity: 0.38;
+}
+.mkai-admin .mk-chart--donut-interactive .mk-chart__seg.is-active {
+  opacity: 1;
+  filter: brightness(1.08);
+}
+.mkai-admin .mk-chart--donut-interactive .mk-chart__seg:focus-visible {
+  filter: brightness(1.12);
+}
+.mkai-admin .mk-chart__num { font-size: 20px; font-weight: 780; fill: var(--mk-text); font-variant-numeric: tabular-nums; }
+.mkai-admin .mk-chart__sub { font-size: 11px; fill: var(--mk-text-muted); }
+.mkai-admin .mk-chart--gauge { overflow: visible; }
+.mkai-admin .mk-minibar { display: flex; flex-direction: column; gap: 10px; }
+.mkai-admin .mk-minibar__row {
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+.mkai-admin .mk-minibar__label {
+  font-size: 12px;
+  color: var(--mk-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mkai-admin .mk-minibar__track {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.22);
+  overflow: hidden;
+}
+.mkai-admin .mk-minibar__fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  transition: width var(--mk-dur-base, 0.24s) var(--mk-ease-out, ease);
+}
+.mkai-admin .mk-minibar__val { font-size: 12px; font-weight: 650; color: var(--mk-text); font-variant-numeric: tabular-nums; }
+.mkai-admin .ov-skeleton {
+  position: relative;
+  overflow: hidden;
+  min-height: 96px;
+  /**
+   * 微光用 background-position 走，而不是让绝对定位伪元素做 translateX：
+   * 后者会给每张骨架单独创建一个合成层（总览页一次 5 张），而
+   * background-position 在元素内部变化、不新增层。对「一闪而过的加载态」
+   * 视觉几乎无差别，但省下 5 个合成层的创建与销毁。
+   */
+  background-color: rgba(148, 163, 184, 0.12);
+  background-image: linear-gradient(
+    90deg,
+    rgba(148, 163, 184, 0.12) 25%,
+    rgba(255, 255, 255, 0.35) 37%,
+    rgba(148, 163, 184, 0.12) 63%
+  );
+  background-size: 300% 100%;
+  animation: ov-shimmer-bg 1.3s ease-in-out infinite;
+}
+@keyframes ov-shimmer-bg {
+  0% { background-position: 100% 0; }
+  100% { background-position: 0 0; }
+}
+.mkai-admin.is-desktop .ov-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.mkai-admin.is-desktop .ov-card--full .ov-meta { grid-template-columns: repeat(3, 1fr); }
+.mkai-admin.is-mobile .ov-grid { grid-template-columns: 1fr; gap: 12px; }
+.mkai-admin.is-mobile .mkai-page-overview .mk-panel-head {
+  padding: 8px 14px 4px;
+}
+.mkai-admin.is-mobile .mkai-page-overview .mk-panel-body {
+  padding: 8px 14px 12px;
+}
+.mkai-admin.is-mobile .ov-card__chart {
+  gap: 10px;
+}
+.mkai-admin.is-mobile .ov-usage-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+}
+.mkai-admin.is-mobile .ov-usage-col + .ov-usage-col {
+  border-left: 1px solid rgba(15, 23, 42, 0.08);
+  border-top: 0;
+  padding-top: 0;
+}
+.mkai-admin.is-mobile .ov-usage-col__label {
+  font-size: 10px;
+}
+.mkai-admin.is-mobile .ov-usage-col {
+  gap: 6px;
+  padding: 0 2px;
+}
+.mkai-admin.is-mobile .ov-inline-kpi--even {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: none;
+}
+.mkai-admin.is-mobile .ov-card--wide,
+.mkai-admin.is-mobile .ov-card--span2,
+.mkai-admin.is-mobile .ov-card--full { grid-column: span 1; }
+.mkai-admin.is-mobile .ov-kpi { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.mkai-admin.is-mobile .ov-kpi--footer .ov-kpi__cell { align-items: flex-start; text-align: left; }
+@media (prefers-reduced-motion: reduce) {
+  /* 骨架屏微光已改为 background-position 方案，这里同步停掉（原先指向已删除的 ::after） */
+  .mkai-admin .ov-skeleton { animation: none; }
+  .mkai-admin .mk-minibar__fill { transition: none; }
+}
+
+/* 模型轮替：切换方式胶囊 + 次数输入框 + 三行声明 */
+.mkai-admin .sc-rot-limit {
+  width: 92px;
+  flex-shrink: 0;
+  text-align: center;
+}
+.mkai-admin .sc-rot-seg {
+  margin: 14px 0 10px;
+}
+/* 三个选项必须始终同一行：等宽列 + 不换行 + 超出省略 */
+.mkai-admin .sc-rot-seg .seg__btn {
+  min-width: 0;
+  padding: 0 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  line-height: 38px;
+  text-align: center;
+}
+.mkai-admin .sc-rot-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.mkai-admin .sc-rot-notes__line {
+  margin: 0;
+  line-height: 1.5;
+}
+@media (max-width: 760px) {
+  .mkai-admin .sc-rot-limit { width: 76px; }
+  .mkai-admin .sc-rot-seg { padding: 4px; gap: 2px; }
+  .mkai-admin .sc-rot-seg .seg__btn {
+    padding: 0 2px;
+    font-size: 13px;
+    letter-spacing: -0.2px;
+  }
+}
+@media (max-width: 380px) {
+  .mkai-admin .sc-rot-seg .seg__btn { font-size: 12px; }
+}
+
+/* =========================================================================
+   毛玻璃性能兜底
+   -------------------------------------------------------------------------
+   本面板共 63 处 backdrop-filter，其中总览页会一次性铺 8 张 glass-card，
+   每张都在做 24px 背景模糊。blur 会把元素提升为独立合成层，页面重排
+   （骨架屏替换、卡片错落入场）时浏览器必须逐层重新采样背景 —— 这是
+   「明明没什么组件却什么设备都慢」的主因，在中低端设备/核显上尤其明显。
+
+   注意：这不是「关掉设计」，而是**按能力降级**。下面各条命中时，改用不透明度
+   更高的纯色面板替代背景模糊 —— 视觉上仍是同一套液态玻璃语言（同样的圆角、
+   描边、阴影、渐变），只是不再实时采样背景。有能力的设备完全不受影响。
+   ========================================================================= */
+
+/* 1) 用户开启系统「减少透明度」——最该尊重的偏好，也最省电 */
+@media (prefers-reduced-transparency: reduce) {
+  .mkai-admin .glass-card,
+  .mkai-admin .panel,
+  .mkai-admin .fold-panel,
+  .mkai-admin .sidebar,
+  .mkai-admin .mk-nav__liquid,
+  .mkai-admin .mk-toast,
+  .mkai-admin .mk-modal,
+  .mkai-admin .mobile-tabbar {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: rgba(255, 255, 255, 0.94) !important;
+  }
+  .mkai-admin .mk-modal-overlay {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: rgba(15, 23, 42, 0.42) !important;
+  }
+}
+
+/* 2) 用户要求减少数据流量 */
+@media (prefers-reduced-data: reduce) {
+  .mkai-admin .glass-card,
+  .mkai-admin .panel,
+  .mkai-admin .fold-panel,
+  .mkai-admin .sidebar,
+  .mkai-admin .mk-toast,
+  .mkai-admin .mk-modal,
+  .mkai-admin .mobile-tabbar {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: rgba(255, 255, 255, 0.94) !important;
+  }
+}
+
+/*
+ * 3) 低端设备：内存 <= 4GB 或核心数 <= 4。
+ *
+ * device-memory 是离散档位（0.25/0.5/1/2/4/8），4 及以下基本可判定入门机；
+ * hardware-concurrency 同理。两者都只在支持的浏览器上生效（Chrome 系），
+ * 不支持的浏览器（Safari / Firefox）不会命中，因此不会误伤高端设备 —— 这正是
+ * 用 max- 而不是 min- 的原因：宁可漏降级，也不能把好设备拖下水。
+ */
+@media (max-device-memory: 4) {
+  .mkai-admin .glass-card,
+  .mkai-admin .panel,
+  .mkai-admin .fold-panel,
+  .mkai-admin .sw-card,
+  .mkai-admin .mk-entity-card {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: rgba(255, 255, 255, 0.9);
+  }
+}
+@media (max-hardware-concurrency: 4) {
+  .mkai-admin .glass-card,
+  .mkai-admin .panel,
+  .mkai-admin .fold-panel,
+  .mkai-admin .sw-card,
+  .mkai-admin .mk-entity-card {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: rgba(255, 255, 255, 0.9);
+  }
+}
+
