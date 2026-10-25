@@ -1,0 +1,559 @@
+/* =========================================================================
+   MK_AI 桌面皮肤层（.mkai-admin.is-desktop）
+   高信息密度 visionOS 深玻璃控制台：常驻分组侧栏 + 顶部状态条 + 右侧检查器抽屉。
+   ========================================================================= */
+
+/* 根：桌面铺满，交由 .mk-console 栅格布局 */
+.mkai-admin.is-desktop {
+  display: block;
+  overflow: hidden;
+}
+
+/* 控制台栅格：常驻侧栏 + 自适应主体，外层留白让玻璃面板浮起 */
+.mkai-admin.is-desktop .mk-console {
+  display: grid;
+  grid-template-columns: 248px minmax(0, 1fr);
+  gap: 14px;
+  height: 100%;
+  min-height: 0;
+  padding: 14px;
+}
+
+/* 侧栏：深玻璃立面 */
+.mkai-admin.is-desktop .mk-console__aside {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 16px 12px;
+  border-radius: var(--mk-radius-xl);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.5));
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: var(--mk-elev-3), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(var(--mk-shell-blur)) saturate(1.4);
+  -webkit-backdrop-filter: blur(var(--mk-shell-blur)) saturate(1.4);
+}
+
+/* 品牌区 */
+.mkai-admin.is-desktop .mk-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px 16px;
+}
+
+.mkai-admin.is-desktop .mk-brand__glyph {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  font-size: 16px;
+  color: var(--mk-on-accent);
+  background: linear-gradient(135deg, var(--mk-brand-400), var(--mk-brand-700));
+  box-shadow: 0 6px 16px rgba(13, 148, 136, 0.35);
+}
+.mkai-admin.is-desktop .mk-brand__text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+.mkai-admin.is-desktop .mk-brand__name {
+  font-weight: 800;
+  font-size: 1.02rem;
+  color: var(--mk-text);
+}
+.mkai-admin.is-desktop .mk-brand__sub {
+  margin-top: 3px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--mk-text-muted);
+}
+
+/* 导航容器（液态指示条的定位参照） */
+.mkai-admin.is-desktop .mk-nav {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px;
+}
+.mkai-admin.is-desktop .mk-nav__slot {
+  position: relative;
+  z-index: 1;
+}
+.mkai-admin.is-desktop .mk-nav__group {
+  padding: 14px 10px 6px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mk-muted);
+}
+
+.mkai-admin.is-desktop .mk-nav__item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: var(--mk-tap-min);
+  padding: 8px 12px;
+  border: 0;
+  border-radius: var(--mk-radius-md);
+  background: transparent;
+  color: var(--mk-text-muted);
+  font: inherit;
+  font-weight: 650;
+  text-align: left;
+  cursor: pointer;
+  transition: color var(--mk-dur-fast) var(--mk-ease-standard),
+    transform var(--mk-dur-fast) var(--mk-ease-standard);
+}
+.mkai-admin.is-desktop .mk-nav__item:hover {
+  color: var(--mk-text);
+}
+.mkai-admin.is-desktop .mk-nav__item.is-active {
+  color: var(--mk-accent-strong);
+}
+.mkai-admin.is-desktop .mk-nav__item:active {
+  transform: scale(0.98);
+}
+.mkai-admin.is-desktop .mk-nav__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.35;
+  transition: opacity var(--mk-dur-fast) var(--mk-ease-standard),
+    transform var(--mk-dur-base) var(--mk-ease-spring);
+}
+.mkai-admin.is-desktop .mk-nav__item.is-active .mk-nav__dot {
+  opacity: 1;
+  transform: scale(1.6);
+}
+
+/* 液态指示条：跟随激活项滑动 */
+.mkai-admin.is-desktop .mk-nav__liquid {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  border-radius: var(--mk-radius-md);
+  background: linear-gradient(135deg, rgba(20, 184, 166, 0.22), rgba(45, 212, 191, 0.12));
+  border: 1px solid rgba(20, 184, 166, 0.4);
+  box-shadow: 0 6px 18px rgba(20, 184, 166, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  opacity: 0;
+  transition: transform var(--mk-dur-base) var(--mk-ease-out),
+    width var(--mk-dur-base) var(--mk-ease-out),
+    height var(--mk-dur-base) var(--mk-ease-out),
+    opacity var(--mk-dur-base) var(--mk-ease-out);
+}
+.mkai-admin.is-desktop .mk-nav__liquid.is-ready {
+  opacity: 1;
+}
+
+/* 侧栏底部：连通探测胶囊 */
+.mkai-admin.is-desktop .mk-console__aside-foot {
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--mk-border);
+}
+.mkai-admin.is-desktop .mk-conn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: var(--mk-tap-min);
+  padding: 8px 12px;
+  border-radius: var(--mk-radius-md);
+  border: 1px solid var(--mk-border);
+  background: rgba(255, 255, 255, 0.5);
+  color: var(--mk-text-muted);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background var(--mk-dur-fast) var(--mk-ease-standard),
+    border-color var(--mk-dur-fast) var(--mk-ease-standard);
+}
+.mkai-admin.is-desktop .mk-conn:hover {
+  background: rgba(255, 255, 255, 0.8);
+}
+.mkai-admin.is-desktop .mk-conn:disabled {
+  cursor: progress;
+}
+
+.mkai-admin.is-desktop .mk-conn__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--mk-muted);
+}
+.mkai-admin.is-desktop .mk-conn--ok .mk-conn__dot {
+  background: var(--mk-success);
+  box-shadow: 0 0 10px rgba(22, 163, 74, 0.6);
+}
+.mkai-admin.is-desktop .mk-conn--fail .mk-conn__dot {
+  background: var(--mk-danger);
+  box-shadow: 0 0 10px rgba(220, 38, 38, 0.5);
+}
+.mkai-admin.is-desktop .mk-conn--checking .mk-conn__dot {
+  background: var(--mk-warn);
+  animation: mk-desk-pulse 1s var(--mk-ease-standard) infinite;
+}
+@keyframes mk-desk-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.7);
+  }
+}
+
+/* 主体列：顶部状态条 + 主区 + 检查器抽屉宿主 */
+.mkai-admin.is-desktop .mk-console__body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: var(--mk-radius-xl);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.66), rgba(255, 255, 255, 0.44));
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: var(--mk-elev-3), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(var(--mk-shell-blur)) saturate(1.3);
+  -webkit-backdrop-filter: blur(var(--mk-shell-blur)) saturate(1.3);
+}
+
+/* 顶部状态条：5 项等宽卡片 */
+.mkai-admin.is-desktop .mk-topbar {
+  padding: 13px 20px;
+  border-bottom: 1px solid var(--mk-border);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0));
+}
+.mkai-admin.is-desktop .mk-topbar__stats {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+.mkai-admin.is-desktop .mk-topbar__tile {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  width: 100%;
+  height: 46px;
+  padding: 5px 12px;
+  border-radius: var(--mk-radius-sm);
+  border: 1px solid var(--mk-border);
+  background: rgba(255, 255, 255, 0.55);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+.mkai-admin.is-desktop .mk-topbar__tile-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mk-muted);
+  line-height: 1.2;
+}
+.mkai-admin.is-desktop .mk-topbar__tile-value {
+  font-size: 0.86rem;
+  font-weight: 720;
+  color: var(--mk-text);
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.25;
+}
+.mkai-admin.is-desktop .mk-stat__value.is-loading {
+  color: var(--mk-muted);
+}
+.mkai-admin.is-desktop .mk-stat--ok .mk-stat__value {
+  color: var(--mk-brand-700);
+}
+.mkai-admin.is-desktop .mk-stat--warn .mk-stat__value {
+  color: var(--mk-warn);
+}
+.mkai-admin.is-desktop button.mk-topbar__tile {
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition:
+    background var(--mk-dur-fast) var(--mk-ease-standard),
+    border-color var(--mk-dur-fast) var(--mk-ease-standard),
+    color var(--mk-dur-fast) var(--mk-ease-standard),
+    transform var(--mk-dur-slow) var(--mk-ease-out);
+}
+.mkai-admin.is-desktop .mk-topbar__cmdk:hover {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: var(--mk-accent-ring, rgba(20, 184, 166, 0.22));
+}
+.mkai-admin.is-desktop .mk-topbar__cmdk:hover .mk-topbar__tile-value {
+  color: var(--mk-accent);
+}
+.mkai-admin.is-desktop .mk-topbar__refresh:hover {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: var(--mk-accent-ring, rgba(20, 184, 166, 0.22));
+}
+.mkai-admin.is-desktop .mk-topbar__refresh:hover .mk-topbar__tile-value {
+  color: var(--mk-accent-strong);
+}
+.mkai-admin.is-desktop .mk-topbar__refresh:active .mk-topbar__tile-value {
+  transform: rotate(180deg);
+}
+
+/* 主区滚动容器 */
+.mkai-admin.is-desktop .mk-console__main {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 20px;
+}
+/* 会话详情：禁外层滚动，仅消息区内部滚动，顶栏保持固定 */
+.mkai-admin.is-desktop .mk-console__main:has(.mkai-page-sessions.is-chat) {
+  overflow: hidden;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.mkai-admin.is-desktop .mk-console__main:has(.mkai-page-sessions.is-chat) .mk-console__page {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.mkai-admin.is-desktop .mk-console__page {
+  animation: mk-desk-in var(--mk-dur-base) var(--mk-ease-out) both;
+}
+@keyframes mk-desk-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 覆盖级弹窗：固定视口、屏幕正中居中（portal 至根级宿主，脱离内容区 backdrop-filter 陷阱） */
+.mkai-admin.is-desktop .mk-inspector {
+  position: fixed;
+  inset: 0;
+  z-index: var(--mk-z-drawer);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  pointer-events: none;
+}
+.mkai-admin.is-desktop .mk-inspector__scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 40, 60, 0.28);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  opacity: 0;
+  transition: opacity var(--mk-dur-base) var(--mk-ease-standard);
+}
+.mkai-admin.is-desktop .mk-inspector.is-open {
+  pointer-events: auto;
+}
+.mkai-admin.is-desktop .mk-inspector.is-open .mk-inspector__scrim {
+  opacity: 1;
+}
+.mkai-admin.is-desktop .mk-inspector__panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(560px, 92vw);
+  max-height: min(80vh, 720px);
+  border-radius: var(--mk-radius-xl, 24px);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.86));
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: var(--mk-elev-float);
+  backdrop-filter: blur(var(--mk-blur-xl)) saturate(1.4);
+  -webkit-backdrop-filter: blur(var(--mk-blur-xl)) saturate(1.4);
+  overflow: hidden;
+  opacity: 0;
+  transform: scale(0.94);
+  transition: opacity var(--mk-dur-base) var(--mk-ease-out),
+    transform var(--mk-dur-base) var(--mk-ease-out);
+}
+.mkai-admin.is-desktop .mk-inspector.is-open .mk-inspector__panel {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.mkai-admin.is-desktop .mk-inspector__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--mk-border);
+}
+.mkai-admin.is-desktop .mk-inspector__title {
+  font-size: 1.05rem;
+  font-weight: 760;
+  color: var(--mk-text);
+}
+.mkai-admin.is-desktop .mk-inspector__subtitle {
+  margin-top: 3px;
+  font-size: 0.78rem;
+  color: var(--mk-text-muted);
+}
+.mkai-admin.is-desktop .mk-inspector__close {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1px solid var(--mk-border);
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--mk-text-muted);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background var(--mk-dur-fast), color var(--mk-dur-fast),
+    transform var(--mk-dur-fast);
+}
+.mkai-admin.is-desktop .mk-inspector__close:hover {
+  background: var(--mk-danger);
+  color: #fff;
+  transform: rotate(90deg);
+}
+.mkai-admin.is-desktop .mk-inspector__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 18px 20px;
+}
+.mkai-admin.is-desktop .mk-inspector__foot {
+  padding: 14px 20px;
+  border-top: 1px solid var(--mk-border);
+}
+
+/* 无障碍：尊重减少动态偏好 */
+@media (prefers-reduced-motion: reduce) {
+  .mkai-admin.is-desktop .mk-console__page,
+  .mkai-admin.is-desktop .mk-nav__liquid,
+  .mkai-admin.is-desktop .mk-nav__dot,
+  .mkai-admin.is-desktop .mk-inspector__panel,
+  .mkai-admin.is-desktop .mk-inspector__scrim,
+  .mkai-admin.is-desktop .mk-inspector__close,
+  .mkai-admin.is-desktop .mk-topbar__refresh,
+  .mkai-admin.is-desktop .mk-conn--checking .mk-conn__dot {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* 命令面板 Ctrl/Cmd+K —— visionOS 玻璃浮层，屏幕正中居中 */
+.mkai-admin.is-desktop .mk-cmdk {
+  position: fixed;
+  inset: 0;
+  z-index: var(--mk-z-cmdk, 80);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.mkai-admin.is-desktop .mk-cmdk__scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 20, 30, 0.32);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+.mkai-admin.is-desktop .mk-cmdk__panel {
+  position: relative;
+  width: min(560px, 92vw);
+  max-height: 62vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--mk-radius-lg, 18px);
+  box-shadow: var(--mk-elev-float, 0 26px 60px rgba(15, 40, 60, 0.2));
+  backdrop-filter: blur(var(--mk-shell-blur, 28px)) saturate(1.3);
+  -webkit-backdrop-filter: blur(var(--mk-shell-blur, 28px)) saturate(1.3);
+  overflow: hidden;
+  animation: mk-cmdk-in var(--mk-dur-base, 0.24s) var(--mk-ease-out, ease);
+}
+@keyframes mk-cmdk-in {
+  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.mkai-admin.is-desktop .mk-cmdk__search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--panel-border);
+}
+.mkai-admin.is-desktop .mk-cmdk__icon { color: var(--mk-accent); font-size: 16px; }
+.mkai-admin.is-desktop .mk-cmdk__input {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  outline: none;
+  font: inherit;
+  font-size: 1rem;
+  color: var(--mk-text);
+}
+.mkai-admin.is-desktop .mk-cmdk__kbd {
+  font-size: 11px;
+  color: var(--mk-text-muted);
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  padding: 2px 6px;
+}
+.mkai-admin.is-desktop .mk-cmdk__list {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  overflow-y: auto;
+}
+.mkai-admin.is-desktop .mk-cmdk__group {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--mk-text-muted);
+  padding: 8px 10px 4px;
+  letter-spacing: 0.02em;
+}
+.mkai-admin.is-desktop .mk-cmdk__item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 0;
+  background: transparent;
+  border-radius: var(--mk-radius-sm, 10px);
+  cursor: pointer;
+  text-align: left;
+  color: var(--mk-text);
+  font: inherit;
+}
+.mkai-admin.is-desktop .mk-cmdk__item.is-active {
+  background: var(--mk-accent-soft, rgba(20, 184, 166, 0.12));
+  color: var(--mk-accent-strong, #115e59);
+}
+.mkai-admin.is-desktop .mk-cmdk__item-label { font-weight: 600; }
+.mkai-admin.is-desktop .mk-cmdk__item-hint { font-size: 12px; color: var(--mk-text-muted); }
+.mkai-admin.is-desktop .mk-cmdk__empty { padding: 24px 12px; text-align: center; color: var(--mk-text-muted); }
+@media (prefers-reduced-motion: reduce) {
+  .mkai-admin.is-desktop .mk-cmdk__panel { animation: none; }
+}

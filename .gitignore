@@ -1,0 +1,34 @@
+# ---------------------------------------------------------------------------
+# 构建产物 —— 不进版本库
+#
+# 说明：webui/ 与 kakake-plugin-mkai/ 都是「跑 npm run build 生成的东西」，
+# 它们的唯一真源是 webui-src/（前端源码）和 src/（宿主端源码）。
+# 把产物提交上去会导致每次构建都产生一大坨 diff，且容易让人误以为
+# 「改 webui/remote.js 就能改行为」——它下次构建就被覆盖了。
+# 克隆仓库后跑一次 npm install && npm run build 即可得到它们。
+# ---------------------------------------------------------------------------
+/webui/
+/kakake-plugin-mkai/
+/kakake-plugin-mkai-*.zip
+
+# 依赖
+/node_modules/
+
+# --- 本地运行/调试残留（脚本产生的临时数据） ---
+.voice-live-data/
+.voice-probe-out/
+tmp/
+*.log
+
+# --- 编辑器 / 系统 ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- AI 助手工作目录（开发过程笔记，不进公开仓库） ---
+.workbuddy/
+
+# --- 本地环境变量（密钥请放这里，不要写进代码） ---
+.env
+.env.local
