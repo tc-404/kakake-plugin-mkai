@@ -22,6 +22,7 @@ import {
     isSmartChatImageForEvent,
 } from './smart-chat-switches';
 import { isSmartChatBlacklistedForEvent } from './smart-chat-blacklist';
+import { sanitizeHostOpText } from './smart-chat-safety';
 import {
     bindSmartChatImageRuntime,
     bindSmartChatImageVision,
@@ -38,7 +39,7 @@ import {
     FILE_DOWNLOAD_TIMEOUT_MS,
     type FileJobMeta,
 } from './smart-chat-file';
-import { ensureBotIdentity } from './smart-chat-identity';
+import { ensureBotIdentity, getBotNickname } from './smart-chat-identity';
 import { ensureBuiltinKnowledge } from './smart-chat-knowledge';
 import {
     busyChats,
@@ -276,6 +277,9 @@ export async function smartChatIngest(deps: SmartChatDeps, event: Record<string,
             : filePlan.placeholderLine;
     }
 
+    // 群管流程消毒：验证码等进上下文会被模型播报/代答（实测出现过完整验证块）
+    text = sanitizeHostOpText(text);
+
     // 无文字、无图片占位、也无文件登记：不入队（纯艾特仍跳过）
     if (!String(text || '').trim()) {
         return { handled: false, aiOnly };
@@ -419,6 +423,137 @@ export async function smartChatIngest(deps: SmartChatDeps, event: Record<string,
     return { handled: true, aiOnly };
 }
 
+function buildEventEntry(
+    deps: SmartChatDeps,
+    chatId: string,
+    event: Record<string, unknown>,
+    kind: 'poke' | 'title',
+    actorId: string,
+    actorNick: string,
+    bodyText: string,
+    targetId: string,
+): SmartChatBufferEntry | null {
+    const shim: Record<string, unknown> = {
+        message_type: 'group',
+        group_id: event.group_id,
+        user_id: event.user_id,
+        self_id: event.self_id,
+        message_id: event.message_id ?? '',
+        sender: { user_id: event.user_id },
+        message: [],
+        raw_message: '',
+    };
+    if (isSmartChatBlacklistedForEvent(deps, shim)) return null;
+    const config = loadSmartChatConfig(deps);
+    if (!isEventEnabled(deps, shim, config)) return null;
+    const nick = actorNick || actorId || '群友';
+    const timeStr = formatEventTime();
+    const label = kind === 'poke' ? '拍一拍' : '群头衔';
+    const entry: SmartChatBufferEntry = {
+        userId: actorId || '0',
+        nickname: nick,
+        text: `${nick}(${actorId || '?'}) ${bodyText}`,
+        time: timeStr,
+        eventKind: kind,
+        atQqs: undefined,
+        eventSnapshot: snapshotEvent(shim),
+    };
+    const selfId = String(event.self_id || '').trim();
+    if (kind === 'poke' && selfId && targetId === selfId) {
+        entry.atQqs = [selfId];
+    }
+    return entry;
+}
+
+function formatEventTime(): string {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+}
+
+function pickRecentNickname(deps: SmartChatDeps, chatId: string, userId: string): string {
+    try {
+        const buf = loadChatBuffer(deps, chatId);
+        for (let i = buf.length - 1; i >= 0; i -= 1) {
+            if (String(buf[i]?.userId || '') === userId && String(buf[i]?.nickname || '').trim()) {
+                return String(buf[i].nickname).trim();
+            }
+        }
+    } catch { /* ignore */ }
+    return '';
+}
+
+function pokeActionText(event: Record<string, unknown>): string {
+    const raw = Array.isArray((event as { raw_info?: unknown }).raw_info)
+        ? ((event as { raw_info: Array<{ type?: unknown; txt?: unknown }> }).raw_info || [])
+        : [];
+    const parts: string[] = [];
+    for (const seg of raw) {
+        if (!seg || typeof seg !== 'object') continue;
+        if (String(seg.type || '') !== 'nor') continue;
+        const t = String(seg.txt || '').trim();
+        if (t) parts.push(t);
+    }
+    return parts.join('');
+}
+
+async function ingestChatEventNotice(
+    deps: SmartChatDeps,
+    event: Record<string, unknown>,
+    kind: 'poke' | 'title',
+): Promise<boolean> {
+    const groupId = String(event.group_id || '').trim();
+    const selfId = String(event.self_id || '').trim();
+    if (!groupId || !selfId) return false;
+    const chatId = `g_${groupId}`;
+    const actorId = String(event.user_id || '').trim();
+    if (!actorId) return false;
+
+    const 自触开关 = readB(deps, 'config.json', '自触开关', false);
+    if (actorId === selfId && !自触开关) return false;
+
+    let bodyText = '';
+    let targetId = '';
+    if (kind === 'poke') {
+        targetId = String((event as { target_id?: unknown }).target_id || '').trim();
+        const action = pokeActionText(event) || '拍了拍';
+        const targetNick = targetId === actorId
+            ? '自己'
+            : (targetId === selfId
+                ? `你（${pickRecentNickname(deps, chatId, selfId) || getBotNickname(deps) || selfId}/${selfId}）`
+                : `${pickRecentNickname(deps, chatId, targetId) || targetId}(${targetId})`);
+        bodyText = `${action} ${targetNick}`;
+        if (targetId === selfId) bodyText += '（拍的是你）';
+    } else {
+        const title = String((event as { title?: unknown }).title || '').trim();
+        if (!title) return false;
+        bodyText = `获得群头衔「${title}」（群主或管理设置的）`;
+    }
+
+    const actorNick = pickRecentNickname(deps, chatId, actorId);
+    const entry = buildEventEntry(deps, chatId, event, kind, actorId, actorNick, bodyText, kind === 'poke' ? targetId : '');
+    if (!entry) return false;
+    entry.nickname = actorNick || actorId;
+
+    const shim = entry.eventSnapshot;
+    const atOnly = isSmartChatAtOnlyForEvent(deps, shim);
+    if (atOnly) {
+        if (!isSmartChatAtOnlyRecordForEvent(deps, shim)) return false;
+        entry.quiet = true;
+        appendChatBuffer(deps, chatId, entry);
+        return true;
+    }
+
+    const pokeAtMe = kind === 'poke' && entry.atQqs?.includes(selfId);
+    const pending = appendChatBuffer(deps, chatId, entry);
+    deps.logger?.info?.(
+        `[智能对话·事件] ${chatId} ${kind} 已记录（缓冲 ${pending.length} 条${pokeAtMe ? '，被拍触发访问' : ''}）: ${entry.text.slice(0, 80)}`,
+    );
+    if (pokeAtMe) {
+        scheduleFlush(deps, chatId);
+    }
+    return true;
+}
+
 /**
  * 群文件上传通知（OneBot notice: group_upload；NapCat 走这条）。
  * 把群文件当消息段下发的协议端（部分 SnowLuma 配置）走 smartChatIngest 的 file 段分支。
@@ -430,6 +565,10 @@ export async function smartChatIngestNotice(
 ): Promise<boolean> {
     if (!deps || !event) return false;
     const noticeType = String((event as { notice_type?: unknown }).notice_type || '').trim();
+    const subType = String((event as { sub_type?: unknown }).sub_type || '').trim();
+    if (noticeType === 'notify' && (subType === 'poke' || subType === 'title')) {
+        return ingestChatEventNotice(deps, event, subType as 'poke' | 'title');
+    }
     if (noticeType !== 'group_upload') return false;
     const groupId = String(event.group_id || '').trim();
     const userId = String(event.user_id || '').trim();

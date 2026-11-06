@@ -12,6 +12,7 @@ import type {
     SmartChatSessionFile,
 } from './smart-chat-types';
 import { SMART_CHAT_ROOT } from './smart-chat-types';
+import { notScriptLine } from './smart-chat-compact';
 import { getBotUserId } from './smart-chat-identity';
 
 const MAX_PEOPLE = 40;
@@ -37,16 +38,22 @@ export function sanitizeEpisodeSummary(raw: string): string {
         .trim();
     if (!s) return '';
 
-    // 嵌套 digest：优先抽 stance 条目
+    // 嵌套 digest：抽 stance 条目，逐条过「台词/反问」排除（宽松判据只排黑）——
+    // 旧版把机器人自己的台词当 stance 存进 episode，召回后变成复读素材。
+    // 必须先按行拆再清洗：先并空格会把「- A\n- B」粘成一条，开头合法就整串放行。
     const stanceBits: string[] = [];
     for (const m of s.matchAll(/<digest-stance>\s*([\s\S]*?)\s*<\/digest-stance>/gi)) {
-        const inner = String(m[1] || '')
-            .replace(/<\/?[^>]+>/g, ' ')
-            .replace(/[·\-•]\s*/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim();
-        if (inner && !/本段无明显约定/.test(inner) && inner.length >= 4) {
-            stanceBits.push(inner.slice(0, 120));
+        const block = String(m[1] || '');
+        for (const row of block.split(/\n+|\s[-•·]\s+/)) {
+            const t = row
+                .replace(/^\s*[-•·]\s*/, '')
+                .replace(/<\/?[^>]+>/g, ' ')
+                .replace(/[·\-•]\s*/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+            if (t && !/本段无明显约定/.test(t) && notScriptLine(t)) {
+                stanceBits.push(t.slice(0, 120));
+            }
         }
     }
     if (stanceBits.length) {
@@ -248,11 +255,17 @@ export function touchPeopleFromBatch(
         upsertPerson(mem, uid, nick);
         const row = mem.people.find((p) => p.user_id === uid);
         if (!row) continue;
-        // 别名：昵称变更史（观察即得）
+        // 别名：昵称变更史（观察即得）。
+        // 旧昵若已是另一个人的现昵称（QQ 重名/换名），记了会把两人串成一人 —— 跳过。
         if (nick && oldNick && oldNick !== nick) {
-            const aliases = Array.isArray(row.aliases) ? row.aliases : [];
-            if (!aliases.includes(oldNick)) aliases.push(oldNick);
-            row.aliases = aliases.slice(-4);
+            const taken = (mem.people || []).some(
+                (p) => p.user_id !== uid && String(p.nickname || '') === oldNick,
+            );
+            if (!taken) {
+                const aliases = Array.isArray(row.aliases) ? row.aliases : [];
+                if (!aliases.includes(oldNick)) aliases.push(oldNick);
+                row.aliases = aliases.slice(-4);
+            }
         }
         // 群头衔 / 群身份 → note
         const title = String(b.groupTitle || '').trim();
@@ -340,7 +353,7 @@ export function recallMemoryBlock(
         .slice(-maxEpisodes)
         .reverse();
     if (!people.length && !episodes.length) return '';
-    const lines: string[] = ['<memory-recall>', '（轻量召回；别当圣旨念）'];
+    const lines: string[] = ['<memory-recall>', '（轻量召回；别当圣旨念；「近事」是历史要点摘要，禁止原样复读）'];
     for (const p of people) {
         const bits = [
             p.nickname ? `${p.nickname}(${p.user_id})` : p.user_id,
@@ -349,7 +362,7 @@ export function recallMemoryBlock(
         lines.push(`· 人物 ${bits.join(' · ')}`);
     }
     for (const e of episodes) {
-        lines.push(`· 近史 ${e.summary}`);
+        lines.push(`· 近事 ${e.summary}`);
     }
     lines.push('</memory-recall>');
     return lines.join('\n');

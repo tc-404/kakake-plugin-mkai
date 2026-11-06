@@ -1,7 +1,7 @@
 {
   "name": "kakake-plugin-mkai",
   "plugin": "MK_AI",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "type": "module",
   "main": "index.mjs",
   "webuiModule": "webui/remote.js",

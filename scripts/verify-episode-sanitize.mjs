@@ -110,15 +110,26 @@ const WITH_STANCE =
     + '[compact 2026-09-30T13:48:00.220Z]\n'
     + '说明：以下为远史压缩。近史原文在后面的消息里；人设以 system 为准。\n'
     + '<digest-stance>\n'
-    + '- 重装完内存倒是清爽了，绕这么一大圈最后回到原点，我早就说过啦\n'
+    + '- 以后叫我阿伟就行\n'
     + '</digest-stance>\n'
     + '<digest-users>[2026-09-29 20:24:08] 外界☆quiz: 发了张图片</digest-users>\n'
     + '</compaction-summary>';
 
 check('R3 有 stance 的 compaction → 只留 stance 要点', () => {
     const out = sanitize(WITH_STANCE);
-    const want = '重装完内存倒是清爽了，绕这么一大圈最后回到原点，我早就说过啦';
+    const want = '以后叫我阿伟就行';
     if (out !== want) return `期望=${JSON.stringify(want)}，实际=${JSON.stringify(out)}`;
+    return true;
+});
+
+// 19 代实测复读链：机器人自己的台词被旧正则（「说过」）抽成 stance 存进 episode，
+// 召回后原样复读。新行为：台词形态的 stance 条目必须丢弃。
+check('R3b 机器人台词形态的 stance → 丢弃（复读链根因）', () => {
+    const out = sanitize(
+        '<compaction-summary>\n[compact 2026-09-30T13:48:00.220Z]\n'
+        + '<digest-stance>\n- 重装完内存倒是清爽了，绕这么一大圈最后回到原点，我早就说过啦\n- 干嘛，叫我就叫我不许说别的啊\n</digest-stance>\n</compaction-summary>',
+    );
+    if (out !== '') return `台词 stance 应丢弃，实际=${JSON.stringify(out)}`;
     return true;
 });
 

@@ -6,7 +6,7 @@
 import type { SmartChatBufferEntry } from './smart-chat-types';
 import { isAllowedMsgEmojiId } from './smart-chat-emoji';
 import { looksLikeToolMarkup } from './smart-chat-provider';
-import { stripCustomerServiceTone } from './smart-chat-safety';
+import { looksLikeSelfEcho, stripCustomerServiceTone } from './smart-chat-safety';
 import { looksLikeStickerRelPath } from './smart-chat-sticker';
 
 export interface ReplyBubble {
@@ -649,6 +649,8 @@ export function refineOutboundByScene(
         actionMax: number;
         /** 本批人话，用于复读判定 */
         recentHumanTexts?: string[];
+        /** 近几轮自己说过的话，用于自我复读判定 */
+        recentSelfTexts?: string[];
         /** 本批是否点名要表情（保留贴纸） */
         batchWantsSticker?: boolean;
         /** 达限/@ 等：不因 hard 压成 shut_up */
@@ -659,6 +661,27 @@ export function refineOutboundByScene(
     let list = Array.isArray(actions) ? [...actions] : [];
     let rewritten = false;
     const humans = opts.recentHumanTexts || [];
+    const selfPriors = opts.recentSelfTexts || [];
+    const stripSelfEcho = (arr) => {
+        if (!selfPriors.length) return { actions: arr, changed: false };
+        const next = [];
+        let changed = false;
+        for (const a of arr) {
+            if (a.type !== 'msg') {
+                next.push(a);
+                continue;
+            }
+            const text = String(a.text || '').trim();
+            const sticker = String(a.sticker || '').trim();
+            if (text && looksLikeSelfEcho(text, selfPriors)) {
+                changed = true;
+                if (sticker) next.push({ ...a, text: '' });
+                continue;
+            }
+            next.push(a);
+        }
+        return { actions: next, changed };
+    };
     const batchWantsSticker = Boolean(opts.batchWantsSticker);
 
     const speakState = (arr: AssistantAction[]) => {
@@ -701,6 +724,9 @@ export function refineOutboundByScene(
         const stripped = stripEchoTexts(list);
         list = stripped.actions;
         rewritten = stripped.changed;
+        const selfStripped = stripSelfEcho(list);
+        list = selfStripped.actions;
+        rewritten = rewritten || selfStripped.changed;
         const { hasText, hasSticker, hasSpeak } = speakState(list);
         if (opts.mustSpeak && !hasText && hasSticker && !batchWantsSticker) {
             return { actions: [], shutUp: true, rewritten: true };
@@ -732,6 +758,9 @@ export function refineOutboundByScene(
     if (looksLikeEchoOfHumans(botTexts, humans)) {
         return { actions: [], shutUp: true, rewritten: true };
     }
+    const selfEchoStripped = stripSelfEcho(list);
+    list = selfEchoStripped.actions;
+    rewritten = rewritten || selfEchoStripped.changed;
 
     // 旁白复盘（围观解说）：允许沉默时吞掉，避免「总结会话」腔
     if (looksLikeNarratorCommentary(botTexts)) {

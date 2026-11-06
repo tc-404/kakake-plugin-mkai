@@ -167,8 +167,10 @@ try {
     ]);
     assert.ok(digest.includes('<compaction-summary>'));
     assert.ok(digest.includes('说明：以下为远史压缩'));
-    assert.ok(digest.includes('我叫阿伟'), '远史 user 原文要点要进 digest');
-    assert.ok(digest.includes('我觉得还是别急着买'), 'assistant 发言要进 digest');
+    assert.ok(digest.includes('我叫阿伟'), '远史 user 立场要点要进 digest');
+    assert.ok(!digest.includes('我觉得还是别急着买'), 'assistant 台词不得进 digest（19 代复读链根因）');
+    assert.ok(!digest.includes('compact truncated'), 'digest 不得携带内部截断标记');
+    assert.ok(digest.length < 2000, '行级采样后 digest 应远小于上限，实际=' + digest.length);
     assert.ok(!digest.includes('<msg>'), 'digest 不能把 API 自标原样带进去');
     assert.strictEqual(isDigestMessage({ role: 'user', content: digest }), true, '真实生成的 digest 必须被真实判定认成 digest');
 

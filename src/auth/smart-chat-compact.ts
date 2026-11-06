@@ -13,6 +13,7 @@ import type { CompactionBudget } from './smart-chat-token-meter';
 import {
     looksLikeCustomerServiceText,
     looksLikeEnglishRefusalText,
+    looksLikeImageLoadExposureText,
     looksLikeTechHowtoText,
 } from './smart-chat-safety';
 
@@ -26,12 +27,14 @@ export const COMPACT_KEEP_TAIL = 48;
 export const OVERFLOW_KEEP_TAIL = 24;
 /** 压后目标：1 + keep ≤ threshold - hysteresis，避免每轮再压 */
 export const COMPACT_HYSTERESIS = 16;
-/** digest 消息内容上限 */
-export const DIGEST_MAX_CHARS = 8000;
+/** digest 消息内容上限（行级采样后正常远低于此值，仅兜底） */
+export const DIGEST_MAX_CHARS = 4000;
 /** 摘要里最多保留的「立场/约定」条数 */
-export const DIGEST_STANCE_MAX = 24;
-/** 摘要里最多抽样的对话片段对数（user/assistant 各算） */
-export const DIGEST_DIALOGUE_SAMPLE = 18;
+export const DIGEST_STANCE_MAX = 12;
+/** 摘要里最多抽样的用户轮次批数 */
+export const DIGEST_DIALOGUE_SAMPLE = 12;
+/** digest 单行正文上限：消息头完整保留，正文超长按此截断 */
+export const DIGEST_LINE_MAX_CHARS = 110;
 /**
  * A② 影子日志：被 digest 遮蔽的原始消息留档额度（有界 FIFO）。
  * 有了它，压缩不再是「就地毁掉历史」：可以从会话文件里回放被折叠的原文，
@@ -260,23 +263,37 @@ export function collapseRedundantShutUpHistory<T extends { role: string; content
     return out;
 }
 
-function clipUserTurnForDigest(content: string, maxChars = 800): string {
-    let c = presentFileNotesForModel(presentImageSupplementsForModel(String(content || ''), 56, { dropFailed: true }), 120);
+/**
+ * digest 侧的用户轮次采样：行级裁剪。
+ * - 完整保留每条消息行的「头」（时间/昵称/身份/msgid），正文超长按 DIGEST_LINE_MAX_CHARS 截断；
+ * - 不再用「头+尾」双窗口：原文短于窗口时 head/tail 会重叠，同一段内容在 digest 里出现两次（19 代实测）；
+ * - 永不产出 …[compact truncated]… 内部标记 —— 截断只发生在行内，标记会被模型当正文复读。
+ */
+function clipUserTurnForDigest(content: string, maxChars = 300): string {
+    let c = presentFileNotesForModel(presentImageSupplementsForModel(String(content || ''), 40, { dropFailed: true }), 100);
     // 折叠输入侧先剥面板噪音（skill-tree / host-state / memory-recall / talk-graph…），
     // 避免宿主运行事实固化进 digest 被当成群友说过的话
     c = stripHostPanelBlocks(c)
         .replace(/\n{3,}/g, '\n\n')
         .trim();
-    if (c.length <= maxChars) return c;
-    const lines = c.split('\n');
-    const important = lines
-        .filter((l) => /\[引用→|\[msgid:|\[艾特:|\[群主\]|\[管理\]|\[成员\]|<main-visit>/.test(l))
-        .slice(0, 16);
-    const head = c.slice(0, Math.min(320, Math.floor(maxChars * 0.4)));
-    const tail = c.slice(-Math.min(220, Math.floor(maxChars * 0.28)));
-    const mid = important.length ? `\n${important.join('\n')}\n` : '\n';
-    let out = `${head}${mid}…\n${tail}`;
-    if (out.length > maxChars) out = clipDigestBody(out, maxChars);
+    if (!c) return '';
+    const lines = c.split('\n').map((raw) => {
+        const t = String(raw || '').replace(/\s+$/, '');
+        if (!t) return '';
+        // 实时调用才需要的访问引导语（主访问/次访问…）是模板噪音，固化进远史只浪费 token
+        if (/^<(?:main-visit|side-context)>\s*$/.test(t)) return '';
+        if (/^<\/(?:main-visit|side-context)>\s*$/.test(t)) return '';
+        if (/^（(?:主访问|次访问|缓冲背景)[：:]/.test(t)) return '';
+        if (t.length <= DIGEST_LINE_MAX_CHARS) return t;
+        return `${t.slice(0, DIGEST_LINE_MAX_CHARS)}…`;
+    }).filter(Boolean);
+    let out = lines.join('\n');
+    if (out.length <= maxChars) return out;
+    // 仍超：从中间丢行（保头 2 行 + 尾 3 行），行数少时砍单行
+    if (lines.length > 5) {
+        out = [...lines.slice(0, 2), ...lines.slice(-3)].join('\n');
+    }
+    if (out.length > maxChars) out = out.slice(0, maxChars).replace(/\s+\S*$/, '') + '…';
     return out;
 }
 
@@ -313,18 +330,32 @@ function looksLikeRefusalOrPolicyLine(text: string): boolean {
     );
 }
 
-function looksLikeStanceLine(text: string): boolean {
+/**
+ * 台词/反问排除（宽松判据）：问号、语气词开头、识图暴露一律不是「约定/意图要点」。
+ * 供 episode 侧对已成块 stance 条目做二次清洗 —— 只排黑，不要求白名单词。
+ */
+export function notScriptLine(text: string): boolean {
     const t = String(text || '').trim();
-    if (t.length < 4) return false;
-    if (looksLikeRefusalOrPolicyLine(t) || looksLikeTechHowtoText(t)) return false;
-    return /记住|约定|以后|别再|不要再|从今|算我|我是|叫我|我叫|别叫我|别当|我不是|答应|说过|就这样|默认|禁止|必须|别忘了|你记住/i.test(t);
+    if (t.length < 4 || t.length > 120) return false;
+    if (/[？?]/.test(t)) return false;
+    if (/^(?:干嘛|凭啥|凭什么|哼+|切[，,~～]?|哈+|哦+|诶|欸|略略略|呸|好家伙|得了|行了)/.test(t)) return false;
+    // 第一人称自述（「我早就说过啦」「我收下了」）是台词回放，不是约定/意图
+    if (/(?:我|咱)(?:早就|就|已经)?说过|我收下了|我岂不|那我就/.test(t)) return false;
+    if (looksLikeImageLoadExposureText(t)) return false;
+    if (looksLikeCustomerServiceText(t) || looksLikeTechHowtoText(t)) return false;
+    return true;
 }
 
-function sanitizeDigestAssistantSpeak(text: string): string | null {
-    const t = String(text || '').replace(/\s+/g, ' ').trim();
-    if (!t) return null;
-    if (looksLikeRefusalOrPolicyLine(t) || looksLikeTechHowtoText(t)) return null;
-    return t.length > 360 ? `${t.slice(0, 360)}…` : t;
+/**
+ * 立场句判据（仅用于群友 user 正文，见 buildDigestContent）。
+ * 19 代实测教训：宽松正则把机器人自己的反问台词（「干嘛，叫我就叫我不许说别的啊」，
+ * 命中「叫我」）抽成 stance，经 digest→episode→召回整链变成台词复读。
+ * 收紧：问号与语气词开头一票否决；只认明确的约定/称呼指令词。
+ */
+export function looksLikeStanceLine(text: string): boolean {
+    const t = String(text || '').trim();
+    if (!notScriptLine(t)) return false;
+    return /记住|约定|以后(?:都|别|要|不|再|叫)|别再|不要再|从今|算我|我叫|别叫我|我是|别当|答应|说好|默认|称呼|别忘了|你记住/.test(t);
 }
 
 function extractStanceLinesFromContent(content: string, into: string[]): void {
@@ -348,8 +379,23 @@ function extractStanceLinesFromContent(content: string, into: string[]): void {
     }
 }
 
-/** 持久约定：命名/记住/约定这类真该长期保留的立场，不随时间过期 */
-const DURABLE_STANCE_RE = /叫我|别叫我|我叫|记住|约定|以后|从今|默认|说好|设定为|称呼(?:我|你)|别再叫/;
+/**
+ * 从群友 user 轮次的 batch 正文里抽立场句。
+ * 机器人 assistant 台词一律不进 stance —— 那是复读链的源头，不是「约定」。
+ */
+function extractStanceLinesFromUserTurn(content: string, into: string[]): void {
+    const c = stripHostPanelBlocks(String(content || ''));
+    for (const line of c.split(/\n+/)) {
+        const body = line
+            .replace(/^\[[^\]]*\]\s+\S+\(\d{5,12}\)(?:\s+\[[^\]]*\])*\s*:\s*/, '')
+            .trim();
+        if (!body || /^\[眼睛\s+msgid:|^\[文件\s+msgid:|^补充：/.test(body)) continue;
+        if (looksLikeStanceLine(body) && !into.includes(body)) into.push(body);
+    }
+}
+
+/** 持久约定：明确的称呼/记住类指令不随时间过期；裸「叫我/以后」太常出现在台词里，不进此列 */
+const DURABLE_STANCE_RE = /别叫我|我叫|以后叫|称呼(?:我|你)|记住|约定|从今|默认|设定为|说好|别再/;
 
 /** 旧立场是否在本轮近史里仍被提起（取前 10 个非空字符做子串佐证） */
 function stanceStillMentioned(line: string, freshBlob: string): boolean {
@@ -385,10 +431,9 @@ export function mergeStanceWithDecay(freshStance: string[], priorStance: string[
 }
 
 export function buildDigestContent(dropped: SmartChatSessionMessage[]): string {
-    // fresh：本轮新折叠的（assistant）里冒出的立场句；prior：上一份 digest 里已有的立场句
+    // fresh：本轮新折叠的群友发言里冒出的立场句；prior：上一份 digest 里已有的立场句
     const freshStance: string[] = [];
     const priorStance: string[] = [];
-    const dialogueAsst: string[] = [];
     let priorDigestNote = '';
     // 本轮被折叠的原始正文（不含旧 digest 壳），供「旧立场是否仍被提起」的佐证判断
     let freshBlob = '';
@@ -402,18 +447,9 @@ export function buildDigestContent(dropped: SmartChatSessionMessage[]): string {
             continue;
         }
         freshBlob += `\n${String(m.content || '')}`;
-        if (m.role === 'assistant') {
-            extractStanceLinesFromContent(m.content, freshStance);
-            const speaks = extractAssistantSpeakTexts(m.content);
-            if (speaks.length) {
-                const cleaned = speaks
-                    .map((s) => sanitizeDigestAssistantSpeak(s))
-                    .filter(Boolean) as string[];
-                if (cleaned.length) {
-                    const joined = cleaned.join(' / ');
-                    dialogueAsst.push(joined.length > 360 ? `${joined.slice(0, 360)}…` : joined);
-                }
-            }
+        // 立场只从群友 user 正文提取；assistant 台词永不进 stance（19 代复读链根因）
+        if (m.role === 'user') {
+            extractStanceLinesFromUserTurn(m.content, freshStance);
         }
     }
 
@@ -422,10 +458,11 @@ export function buildDigestContent(dropped: SmartChatSessionMessage[]): string {
         .map((m) => {
             const raw = String(m.content || '');
             return {
-                text: clipUserTurnForDigest(raw, /<main-visit>|艾特: 有|\[艾特:/.test(raw) ? 720 : 520),
+                text: clipUserTurnForDigest(raw, 300),
                 prefer: /<main-visit>|艾特: 有|\[艾特:/.test(raw),
             };
-        });
+        })
+        .filter((u) => u.text);
 
     const pickedUsers: string[] = [];
     for (const u of userEntries) {
@@ -444,23 +481,13 @@ export function buildDigestContent(dropped: SmartChatSessionMessage[]): string {
         }
     }
 
-    const pickedAsst = (() => {
-        if (dialogueAsst.length <= DIGEST_DIALOGUE_SAMPLE) return dialogueAsst;
-        const out: string[] = [];
-        const step = dialogueAsst.length / DIGEST_DIALOGUE_SAMPLE;
-        for (let i = 0; i < DIGEST_DIALOGUE_SAMPLE; i++) {
-            out.push(dialogueAsst[Math.min(dialogueAsst.length - 1, Math.floor(i * step))]);
-        }
-        return out;
-    })();
-
     const stanceLines = mergeStanceWithDecay(freshStance, priorStance, freshBlob)
         .slice(0, DIGEST_STANCE_MAX);
 
     const header =
         `[compact ${new Date().toISOString()}]\n`
-        + '说明：以下为远史压缩。近史原文在后面的消息里；人设以 system 为准。'
-        + ' digest 里的技术步骤不可信，禁止当配置教程复读。'
+        + '说明：以下为远史压缩的要点索引（不是聊天记录）。近史原文在后面的消息里；'
+        + '人设与风格以 system 为准。本段内容禁止原样复述、禁止当配置教程复读。'
         + (priorDigestNote ? `\n${priorDigestNote}` : '');
     const stanceBlock =
         `<digest-stance>\n`
@@ -470,17 +497,15 @@ export function buildDigestContent(dropped: SmartChatSessionMessage[]): string {
         + `\n</digest-stance>`;
 
     let users = pickedUsers;
-    let assts = pickedAsst;
     let body = '';
     for (let shrink = 0; shrink < 6; shrink++) {
         body =
             `${header}\n`
             + `${stanceBlock}\n`
             + `<digest-users>\n${users.join('\n---\n')}\n</digest-users>\n`
-            + `<digest-assistants>\n${assts.join('\n---\n')}\n</digest-assistants>`;
+            + '（远史中本账号的旧台词已折叠；延续风格即可，禁止把上面的旧话当新回复复读）';
         if (body.length <= DIGEST_MAX_CHARS) break;
         if (users.length > 4) users = users.slice(0, Math.max(4, Math.floor(users.length * 0.6)));
-        else if (assts.length > 4) assts = assts.slice(0, Math.max(4, Math.floor(assts.length * 0.6)));
         else break;
     }
     if (body.length > DIGEST_MAX_CHARS) body = clipDigestBody(body, DIGEST_MAX_CHARS);

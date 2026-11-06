@@ -434,7 +434,7 @@ assert.strictEqual(detectSpeakPreference('你可以说话了'), 'ask');
 
   const knowledgeSrc = fs.readFileSync(path.join(root, 'src/auth/smart-chat-knowledge.ts'), 'utf8');
   assert.ok(!knowledgeSrc.includes('建议条数优先用贴纸填'));
-  assert.ok(knowledgeSrc.includes('勿为凑建议条数硬发表情'));
+  assert.ok(knowledgeSrc.includes('别攒着') && knowledgeSrc.includes('别凑数连发'));
 
   const safetySrc = fs.readFileSync(path.join(root, 'src/auth/smart-chat-safety.ts'), 'utf8');
   assert.ok(!safetySrc.includes('建议条数优先用 send_sticker 填'));

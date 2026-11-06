@@ -127,6 +127,114 @@ export function rewriteImageLoadExposure(
     return { kind: 'shut_up' };
 }
 
+const TOOL_NARRATION_RE =
+    /^(?:表情包|图片|消息|图)?(?:已(?:经)?(?:发出|发送|回复|发送成功|发完)|发送成功|回复完成|发送失败|发送完毕|任务完成|执行完毕|已为你(?:发出|发送|搜索|完成))[。！!~～\s]*(?:回复完成|收工|搞定)?[。！!~～\s]*$/;
+
+export function looksLikeToolNarrationText(text: string): boolean {
+    const t = String(text || '').replace(/\s+/g, '');
+    if (!t || t.length > 20) return false;
+    return TOOL_NARRATION_RE.test(t);
+}
+
+const SELF_REBUTTAL_RE =
+    /(?:够|这够|这样够|够意思|够硬|够文明|够狠)[^。！!？\n]{0,4}了吧|还要我(?:怎样|怎么)|到底谁急了|谁急了[。！!？]|刚(?:才)?说[^。！!？\n]{0,14}转头|这回[^。！!？\n]{0,6}了吧|服不服|怕了吧|认(?:不)?:?认输|怕了没/;
+
+export function looksLikeSelfRebuttal(text: string): boolean {
+    const t = String(text || '').trim();
+    if (t.length < 3 || t.length > 60) return false;
+    if (/[?？]$/.test(t) && /你/.test(t)) return false;
+    return SELF_REBUTTAL_RE.test(t);
+}
+
+function normEchoText(raw: string): string {
+    return String(raw || '')
+        .replace(/[\s，,。.！!？?~～·、（）()「」『』"']+/g, '')
+        .toLowerCase();
+}
+
+export function looksLikeSelfEcho(text: string, priorSelfTexts: string[], minRun = 6): boolean {
+    const a = normEchoText(text);
+    if (a.length < minRun + 2) return false;
+    for (const prior of priorSelfTexts || []) {
+        const b = normEchoText(prior);
+        if (b.length < minRun) continue;
+        if (a.includes(b) || b.includes(a)) return true;
+        const window = Math.min(a.length, 20);
+        for (let size = window; size >= minRun; size -= 1) {
+            for (let start = 0; start + size <= a.length; start += 1) {
+                if (b.includes(a.slice(start, start + size))) return true;
+            }
+        }
+    }
+    return false;
+}
+
+const PET_PHRASE_RE =
+    /(?:^|[，,。\s！!？?~～])(?:哼+|切+|略略略|嘻+|嘤+|哦豁|哼唧)(?=$|[，,。\s！!？?~～])/g;
+
+function countPetPhrases(text: string): number {
+    const t = String(text || '');
+    if (!t) return 0;
+    const hits = t.match(new RegExp(PET_PHRASE_RE.source, 'g'));
+    return hits ? hits.length : 0;
+}
+
+export function deflangePetPhrases<T extends { type: string; text?: string }>(actions: T[]): { actions: T[]; trimmed: number } {
+    const msgs = (actions || []).filter((a) => a?.type === 'msg' && String(a.text || '').trim() && !String((a as { sticker?: string }).sticker || '').trim());
+    const total = msgs.reduce((sum, a) => sum + countPetPhrases(a.text), 0);
+    if (msgs.length < 2 || total <= 1) return { actions, trimmed: 0 };
+    const quota = Math.max(1, Math.floor(total / 2));
+    let used = 0;
+    let trimmed = 0;
+    const out = (actions || []).map((a) => {
+        if (a?.type !== 'msg' || !String(a.text || '').trim() || String((a as { sticker?: string }).sticker || '').trim()) return a;
+        const c = countPetPhrases(a.text);
+        if (!c) return a;
+        if (used < quota) {
+            used += c;
+            return a;
+        }
+        const stripped = String(a.text)
+            .replace(new RegExp(PET_PHRASE_RE.source, 'g'), (m, lead) => (lead === ' ' ? ' ' : ''))
+            .replace(/^[，,。\s]+/, '')
+            .replace(/\s{2,}/g, ' ')
+            .trim();
+        trimmed += c;
+        return { ...a, text: stripped };
+    }).filter((a) => a?.type !== 'msg' || String((a as { sticker?: string }).sticker || '').trim() || String(a.text || '').trim());
+    return { actions: out, trimmed };
+}
+
+const YESMAN_RE =
+    /^(?:(?:对吧|是的?|对啊|对的|是的呢|确实|确实如此|没错|没错没错|噢?对|可不是(?:嘛)?|就是(?:啊|呀)?|同感|\+1|同意|是吧|好耶|好哦|真的|ok|okay|欧克)|(?:对+)|(?:嗯+呐?)+)[。，！!~～·…]*$/i;
+
+export function looksLikeYesManText(text: string): boolean {
+    const t = String(text || '').replace(/\s+/g, '');
+    if (!t || t.length > 12) return false;
+    if (/[?？]/.test(t)) return false;
+    return YESMAN_RE.test(t);
+}
+
+/**
+ * 群管流程文本消毒：入群验证码/审核指令是群管机器人的私务，
+ * 进聊天上下文后模型可能播报验证码甚至代答验证（实测会话里已出现完整验证块）。
+ * 纯验证消息整体替换；混在普通消息里的验证行只遮验证码本体。
+ */
+export const HOST_OP_NOTICE_TEXT = '[群管验证消息：已隐藏，勿复读、勿代答]';
+
+export function sanitizeHostOpText(text: string): string {
+    const t = String(text || '');
+    if (!t) return t;
+    const MARK = /验证方式|验证内容|可以机会|入群审核|请在\s*\d+\s*分钟内发送/g;
+    if (!MARK.test(t)) return t;
+    MARK.lastIndex = 0;
+    const markers = (t.match(MARK) || []).length;
+    if (markers >= 2) return HOST_OP_NOTICE_TEXT;
+    return t
+        .replace(/(\[验证内容\]\s*[：:]\s*)\S+/g, '$1（已隐藏）')
+        .replace(/(验证内容\s*[：:]\s*)\S+/g, '$1（已隐藏）');
+}
+
 /** 冒充插件/框架作者主权腔 */
 export function looksLikeAuthorImpersonation(text: string): boolean {
     const t = String(text || '').trim();

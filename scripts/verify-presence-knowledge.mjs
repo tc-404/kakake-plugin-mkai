@@ -169,7 +169,7 @@ const kbGlobalEntries = [
   assert.ok(!sys.includes('这波属实有点东西'), 'no canned style in system');
   assert.ok(!types.includes('这波属实有点东西'), 'no canned style in system source');
   // 1.3.1 去重：贴纸凑数约束只归 PROTOCOL 的表情包节
-  assert.ok(PROTOCOL_SYSTEM_SUFFIX.includes('勿为凑建议条数硬发表情'), 'no sticker padding');
+  assert.ok(PROTOCOL_SYSTEM_SUFFIX.includes('别凑数连发') && PROTOCOL_SYSTEM_SUFFIX.includes('情绪到位就发'), 'no sticker padding');
   assert.ok(!types.includes('勿为凑数硬发表情'), 'sticker padding rule not duplicated in types');
   assert.ok(types.includes('prefer_silence_at'), 'TTL field');
   assert.ok(types.includes("kind?: SmartChatKnowledgeKind"), 'knowledge kind');

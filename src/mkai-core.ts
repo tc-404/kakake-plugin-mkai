@@ -110,7 +110,7 @@ export async function plugin_onmessage(ctx: any, event: any): Promise<void> {
   }
 }
 
-export async function plugin_onevent(ctx: any, event: any): Promise<void> {
+export async function plugin_onevent(ctx: any, event: any): Promise<boolean> {
   if (ctx) {
     gCtx = ctx;
     bindBotCtx(ctx);
@@ -119,12 +119,13 @@ export async function plugin_onevent(ctx: any, event: any): Promise<void> {
         BOTAPI(ctx, action, params || {});
     }
   }
-  if (!smartChatDeps || !event) return;
+  if (!smartChatDeps || !event) return false;
   // 群文件上传通知（notice: group_upload）→ 识别文件
   try {
-    await smartChatIngestNotice(smartChatDeps, event);
+    return await smartChatIngestNotice(smartChatDeps, event);
   } catch (e: any) {
     gLogger?.error?.('[智能对话] 处理群文件通知失败:', e?.message || e);
+    return false;
   }
 }
 

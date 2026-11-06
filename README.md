@@ -2,7 +2,7 @@
 
 > 给 Kakake 机器人装上一个真正会聊天的 AI —— 群聊私聊都行，多厂商接入、联网、识图、表情包、语音，全套可视化后台。
 
-[![version](https://img.shields.io/badge/version-1.5.0-14b8a6?style=flat-square)](https://github.com/tc-404/kakake-plugin-mkai/releases)
+[![version](https://img.shields.io/badge/version-1.6.0-14b8a6?style=flat-square)](https://github.com/tc-404/kakake-plugin-mkai/releases)
 [![license](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](./package.json)
 [![platform](https://img.shields.io/badge/platform-Kakake%20%2F%20MKcc-8b5cf6?style=flat-square)](#环境要求)
 [![backend](https://img.shields.io/badge/backend-React%20%E5%8F%AF%E8%A7%86%E5%8C%96%E5%90%8E%E5%8F%B0-0ea5e9?style=flat-square)](#后台一览)
@@ -76,7 +76,7 @@ MK_AI 是一个运行在 **咔咔珂（Kakake / MKcc）** 上的独立 AI 聊天
 
 **方式 A：用打包好的 zip（推荐）**
 
-1. 下载 `kakake-plugin-mkai-1.5.0.zip`
+1. 下载 `kakake-plugin-mkai-1.6.0.zip`
 2. 解压到 Kakake 的插件目录
 3. 在控制台里加载插件
 

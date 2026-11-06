@@ -32,6 +32,7 @@ import {
     normalizeRecentStickers,
 } from './smart-chat-sticker';
 import { searchKnowledgeTopM, selectLoreByKeys, ensureBuiltinKnowledge } from './smart-chat-knowledge';
+import { selectSlangByHits } from './smart-chat-slang';
 import {
     loadChatMemory,
     saveChatMemory,
@@ -98,6 +99,11 @@ import {
     stripCustomerServiceTone,
     rewriteEnglishRefusal,
     looksLikeImageLoadExposureText,
+    looksLikeYesManText,
+    looksLikeToolNarrationText,
+    looksLikeSelfRebuttal,
+    looksLikeSelfEcho,
+    deflangePetPhrases,
 } from './smart-chat-safety';
 import { buildSilenceVetoSeed, decideSilence, refreshPreferSilence } from './smart-chat-silence';
 import {
@@ -563,7 +569,10 @@ export async function flushChat(
                 `[智能对话] ${chatId} 技能树已变更，重新冻结 system skillHash=${skillFreeze.hash}（本轮打断一次前缀缓存，历史不动）`,
             );
         }
-        const loreEntries = selectLoreByKeys(deps, queryText, groupId, 4);
+        const loreEntries = [
+            ...selectLoreByKeys(deps, queryText, groupId, 4),
+            ...selectSlangByHits(queryText, 6),
+        ];
         const ns = getActiveSessionNamespace(deps, config);
         const mem = loadChatMemory(deps, ns.fingerprint, chatId);
         touchPeopleFromBatch(mem, batch);
@@ -696,6 +705,7 @@ export async function flushChat(
         const runMkApi = (name, args) => executeMkApiFunctionCall(mkApiCtx, name, args);
         /** 本轮工具通道已校验入队、待最终出站的表情包相对路径（不即时发群） */
         const pendingStickers: string[] = [];
+        const toolPreambleSet = new Set<string>();
         const actionMax = Math.max(1, Number(config.action_max) || 3);
         let nonStickerFcUsed = false;
         let stickerAttempts = 0;
@@ -961,6 +971,14 @@ export async function flushChat(
             const preambles = result.content?.trim()
                 ? inferToolPreambleTexts(result.content)
                 : [];
+            for (const pt of preambles) {
+                const key = String(pt || '').replace(/[\s，。！!？?、~～]/g, '');
+                if (key) toolPreambleSet.add(key);
+            }
+            for (const pt of preambles) {
+                const key = String(pt || '').replace(/[\s，。！!？?、~～]/g, '');
+                if (key) toolPreambleSet.add(key);
+            }
             const planNote = preambles[0]
                 || String(result.content || '').replace(/<[^>]+>/g, ' ').trim().slice(0, 80)
                 || '(模型未给 status，按工具名续程)';
@@ -1081,7 +1099,7 @@ export async function flushChat(
                 config,
                 composed.systemPrompt,
                 liveMessages,
-                { tools: attachedTools, tool_choice: buildForceSendStickerToolChoice() },
+                { tools: attachedTools, tool_choice: 'auto' },
             );
             retry.usage = mergeUsage(result.usage, retry.usage);
             result = retry;
@@ -1139,15 +1157,15 @@ export async function flushChat(
                 liveMessages.push({
                     role: 'user',
                     content:
-                        '[宿主] 对方点名要图。必须调 send_sticker（path=图库名/文件名），'
-                        + '禁止只说发了/给你一张/Here\'s one 却零次工具。'
-                        + '若发不出，用一句短 <msg> 承认发不出。',
+                        '[宿主] 对方点名要图，这是硬要求：本轮必须真的调 send_sticker 工具（path 从 [表情包选取规则] 的已装表里抄一个真实文件名，拿不准就先调 list_stickers），'
+                        + '禁止只说发了/给你一张/Here\'s one 却零次工具调用。'
+                        + '若确实发不出，用一句短 <msg> 承认发不出。',
                 });
                 const forceSticker = await chatCompletion(
                     config,
                     composed.systemPrompt,
                     liveMessages,
-                    { tools: attachedTools, tool_choice: buildForceSendStickerToolChoice() },
+                    { tools: attachedTools, tool_choice: 'auto' },
                 );
                 forceSticker.usage = mergeUsage(result.usage, forceSticker.usage);
                 result = forceSticker;
@@ -1269,6 +1287,11 @@ export async function flushChat(
         let sceneBias = silenceDec.sceneBias;
         const streak = Math.max(0, Number(session.shut_up_streak) || 0);
 
+        const recentSelfTexts = (session.messages || [])
+            .filter((m) => m.role === 'assistant')
+            .slice(-12)
+            .flatMap((m) => [...String(m.content || '').matchAll(/<msg[^>]*>([\s\S]*?)<\/msg>/g)].map((x) => x[1].trim()))
+            .filter(Boolean);
         const recentHumanTexts = batch
             .map((b) => String(b.text || '').trim())
             .filter((t) => t && !/^\[眼睛\s+msgid:/i.test(t) && !/^补充：/.test(t));
@@ -1287,6 +1310,7 @@ export async function flushChat(
         let authorImpersonationHit = false;
         const scrubMsgActions = (actions) => {
             const next = [];
+            let textMsgIdx = -1;
             for (const a of actions || []) {
                 if (a.type !== 'msg') {
                     next.push(a);
@@ -1312,7 +1336,23 @@ export async function flushChat(
                     if (!atBot && silenceAllowed) continue;
                     text = '';
                 }
+                if (looksLikeYesManText(text)) {
+                    if (!atBot && silenceAllowed && !forceSpeak) continue;
+                    text = '';
+                }
+                if (looksLikeToolNarrationText(text)) {
+                    if (!atBot && silenceAllowed && !forceSpeak) continue;
+                    text = '';
+                }
+                {
+                    const key = String(text || '').replace(/[\s，。！!？?、~～]/g, '');
+                    if (key && toolPreambleSet.has(key)) continue;
+                }
                 if (!text) continue;
+                if (textMsgIdx >= 0 && looksLikeSelfRebuttal(text)) {
+                    continue;
+                }
+                textMsgIdx += 1;
                 if (looksLikeAuthorImpersonation(text)) {
                     authorImpersonationHit = true;
                     // 冒充作者句一律丢弃：插件不替它编「得问作者」。
@@ -1321,7 +1361,11 @@ export async function flushChat(
                 }
                 next.push({ ...a, text });
             }
-            return dropTrailingSoftFollowUp(next);
+            const deflanged = deflangePetPhrases(next);
+            if (deflanged.trimmed > 0) {
+                deps.logger?.info?.(`[智能对话] ${chatId} 语气词贴片密度过高，削去 ${deflanged.trimmed} 处`);
+            }
+            return dropTrailingSoftFollowUp(deflanged.actions);
         };
 
         const actionsLookLikeHowto = (actions) =>
@@ -1347,6 +1391,7 @@ export async function flushChat(
             toolsUsed: nonStickerToolsUsed,
             actionMax: config.action_max,
             recentHumanTexts,
+            recentSelfTexts,
             batchWantsSticker: batchWantsStickerEarly,
         });
         const sceneWantedShutUp = Boolean(refined.shutUp)
@@ -1414,9 +1459,11 @@ export async function flushChat(
         if (forceSpeak && !hasRealTextMsg(limited.actions) && !pendingStickers.length) {
             const rescueHint = atBot
                 ? '[宿主] 本轮被点名，必须开口。禁止 <shut_up/>，禁止只贴表情，禁止输出「……」。'
+                    + '禁止纯附和短句（对吧/是的/确实/没错/嗯呐）：必须说出你自己的判断——同意就带一句你的理由，不同意就直接顶回去，或抛一个新角度。'
                     + '用 <replies> 在行为数范围内写够该说的点（可多条很短 <msg>），像普通群友随口接——有态度就行，别当客服、别祝使用顺利、别把每个问题答完。'
                     + '禁止自称插件作者或「我的插件」。'
                 : '[宿主] 沉默已达上限，本轮必须开口。禁止 <shut_up/>，禁止只贴表情，禁止输出「……」。'
+                    + '禁止纯附和短句（对吧/是的/确实/没错/嗯呐）：给出你自己的态度——同意要带理由，不同意就直说，或抛个新角度/追问一句。'
                     + '用 <replies> 在行为数范围内写一条很短的 <msg>：像普通群友随口接一句即可，别当客服、别复盘全场。';
             deps.logger?.warn?.(
                 `[智能对话] ${chatId} ${atBot ? '须开口' : '达限强制'}但仍沉默，强制补一句`,
